@@ -1,5 +1,6 @@
 import { PassThrough, Readable } from 'stream';
-import PromiseDependentWritableStream from '../stream/PromiseDependentWritableStream';
+
+import { PromiseDependentWritableStream } from '../stream/PromiseDependentWritableStream';
 import * as streamUtils from './stream';
 
 describe('stream utils', () => {
@@ -50,7 +51,7 @@ describe('stream utils', () => {
       const writeStream = new PromiseDependentWritableStream();
 
       await expect(streamUtils.waitForPromiseDependentStreamPipe(readStream, writeStream)).rejects.toThrowError(
-        'waitForPromiseDependentStreamPipe called without a stream promise',
+        'waitForPromiseDependentStreamPipe called without a stream promise'
       );
     });
   });

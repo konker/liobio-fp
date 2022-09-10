@@ -1,6 +1,7 @@
-import { Writable } from 'stream';
-import PromiseDependentWritableStream from './PromiseDependentWritableStream';
 import sinon from 'sinon';
+import { Writable } from 'stream';
+
+import { PromiseDependentWritableStream } from './PromiseDependentWritableStream';
 
 describe('PromiseDependentWritableStream', () => {
   const sandbox = sinon.createSandbox();

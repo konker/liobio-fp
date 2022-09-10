@@ -1,13 +1,15 @@
 // [XXX: need to require AWS to be able to mock it in this way]
-// tslint:disable-next-line:no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const AWS = require('aws-sdk');
-import { PassThrough, Readable, Writable } from 'stream';
-import { fromTask, fromTaskEither, fromTaskOption } from 'ruins-ts';
-import { DataAccessor, FileType } from './DataAccessor';
-import sinon from 'sinon';
 import readline from 'readline';
+import { fromTask, fromTaskEither, fromTaskOption } from 'ruins-ts';
+import sinon from 'sinon';
+import { PassThrough, Readable, Writable } from 'stream';
+
+import { PromiseDependentWritableStream } from '../stream/PromiseDependentWritableStream';
+import type { DataAccessor } from './DataAccessor';
+import { FileType } from './DataAccessor';
 import { s3DataAccessor } from './S3DataAccessor';
-import PromiseDependentWritableStream from '../stream/PromiseDependentWritableStream';
 
 describe('DataAccessor', () => {
   const sandbox = sinon.createSandbox();
@@ -70,7 +72,7 @@ describe('DataAccessor', () => {
 
       it('should fail correctly', async () => {
         await expect(fromTaskEither(dataAccessor.listFiles('s3://foobucket/bar/file.csv'))).rejects.toThrow(
-          '[S3DataAccessor] Could not list files, non-directory path given',
+          '[S3DataAccessor] Could not list files, non-directory path given'
         );
         expect(AWS.S3().listObjectsV2.callCount).toBe(0);
       });
@@ -150,7 +152,7 @@ describe('DataAccessor', () => {
 
       it('should fail correctly', async () => {
         await expect(
-          fromTaskEither(dataAccessor.writeFile('s3://foobucket/bar/dir', 'wham-bam-thank-you-sam')),
+          fromTaskEither(dataAccessor.writeFile('s3://foobucket/bar/dir', 'wham-bam-thank-you-sam'))
         ).rejects.toThrow('[S3DataAccessor] Cannot write a file with a directory url');
         expect(AWS.S3().putObject.callCount).toBe(0);
       });
@@ -169,7 +171,7 @@ describe('DataAccessor', () => {
 
       it('should fail correctly', async () => {
         await expect(fromTaskEither(dataAccessor.deleteFile('s3://foobucket/bar/dir'))).rejects.toThrow(
-          '[S3DataAccessor] Cannot delete a file with a directory url',
+          '[S3DataAccessor] Cannot delete a file with a directory url'
         );
         expect(AWS.S3().deleteObject.callCount).toBe(0);
       });
@@ -188,7 +190,7 @@ describe('DataAccessor', () => {
 
       it('should fail correctly', async () => {
         await expect(fromTaskEither(dataAccessor.createDirectory('s3://foobucket/bar/zazam.json'))).rejects.toThrow(
-          '[S3DataAccessor] Cannot create a directory with a non-directory url',
+          '[S3DataAccessor] Cannot create a directory with a non-directory url'
         );
         expect(AWS.S3().putObject.callCount).toBe(0);
       });
@@ -212,7 +214,7 @@ describe('DataAccessor', () => {
 
       it('should fail correctly', async () => {
         await expect(fromTaskEither(dataAccessor.removeDirectory('s3://foobucket/bar/zazam.json'))).rejects.toThrow(
-          '[S3DataAccessor] Cannot remove a directory with a non-directory url',
+          '[S3DataAccessor] Cannot remove a directory with a non-directory url'
         );
         expect(AWS.S3().deleteObject.callCount).toBe(0);
       });
@@ -228,7 +230,7 @@ describe('DataAccessor', () => {
     describe('fileName', () => {
       it('should function correctly', async () => {
         await expect(fromTaskOption(dataAccessor.fileName('s3://foobucket/wat/bar/baz.json'))).resolves.toBe(
-          'baz.json',
+          'baz.json'
         );
         await expect(fromTaskOption(dataAccessor.fileName('s3://foobucket/wat/bar/'))).resolves.toBe(undefined);
       });

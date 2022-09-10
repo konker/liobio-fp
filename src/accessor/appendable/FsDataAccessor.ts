@@ -1,10 +1,11 @@
 import _fs from 'fs';
 import _path from 'path';
 import _readline from 'readline';
-import { FileType } from '../DataAccessor';
-import { Readable, Writable } from 'stream';
+import type { Readable, Writable } from 'stream';
+
 import * as P from '../../prelude';
-import { AppendableDataAccessor } from './AppendableDataAccessor';
+import { FileType } from '../DataAccessor';
+import type { AppendableDataAccessor } from './AppendableDataAccessor';
 
 type Model = {
   readonly fs: typeof _fs;
@@ -31,8 +32,7 @@ function getFileType(filePath: string): P.ReaderTask<Model, FileType> {
 }
 
 function exists(fileOrDirPath: string): P.ReaderTaskEither<Model, string, boolean> {
-  return ({ fs }) =>
-    P.TaskEither_.tryCatch(async () => fs.existsSync(fileOrDirPath), String);
+  return ({ fs }) => P.TaskEither_.tryCatch(async () => fs.existsSync(fileOrDirPath), String);
 }
 
 function readFile(filePath: string): P.ReaderTaskEither<Model, string, Buffer> {
@@ -84,9 +84,9 @@ function getFileLineReadStream(filePath: string): P.ReaderTaskEither<Model, stri
               crlfDelay: Infinity,
               escapeCodeTimeout: 10000,
             }),
-          String,
-        ),
-      ),
+          String
+        )
+      )
     );
 }
 
@@ -104,7 +104,7 @@ function dirName(filePath: string): P.ReaderTask<Model, string> {
   return (model) =>
     P.pipe(
       getFileType(filePath)(model), //[FIXME:fp naive]
-      P.Task_.map((fileType) => (fileType === FileType.Directory ? filePath : model.path.dirname(filePath))),
+      P.Task_.map((fileType) => (fileType === FileType.Directory ? filePath : model.path.dirname(filePath)))
     );
 }
 
@@ -123,12 +123,13 @@ function fileName(filePath: string): P.ReaderTask<Model, P.Option<string>> {
   //     ),
   //   );
 
-  return (model) => P.pipe(
-    getFileType(filePath)(model), //[FIXME:fp naive]
-    P.Task_.map((fileType) =>
-      fileType === FileType.Directory ? P.Option_.none : P.Option_.some(model.path.basename(filePath)),
-    ),
-  );
+  return (model) =>
+    P.pipe(
+      getFileType(filePath)(model), //[FIXME:fp naive]
+      P.Task_.map((fileType) =>
+        fileType === FileType.Directory ? P.Option_.none : P.Option_.some(model.path.basename(filePath))
+      )
+    );
 }
 
 function joinPath(...parts: Array<string>): P.Reader<Model, string> {
@@ -151,23 +152,24 @@ export function fsDataAccessor(): P.Task<AppendableDataAccessor> {
       ID: 'FsDataAccessor',
       PATH_SEP: _path.sep,
 
-      listFiles: (...args) => listFiles(...args)(model),
-      getFileType: (...args) => getFileType(...args)(model),
-      exists: (...args) => exists(...args)(model),
-      readFile: (...args) => readFile(...args)(model),
-      writeFile: (...args) => writeFile(...args)(model),
-      deleteFile: (...args) => deleteFile(...args)(model),
-      createDirectory: (...args) => createDirectory(...args)(model),
-      removeDirectory: (...args) => removeDirectory(...args)(model),
-      getFileReadStream: (...args) => getFileReadStream(...args)(model),
-      getFileLineReadStream: (...args) => getFileLineReadStream(...args)(model),
-      getFileWriteStream: (...args) => getFileWriteStream(...args)(model),
-      getFileAppendWriteStream: (...args) => getFileAppendWriteStream(...args)(model),
-      dirName: (...args) => dirName(...args)(model),
-      fileName: (...args) => fileName(...args)(model),
-      joinPath: (...args) => joinPath(...args)(model),
-      relative: (...args) => relative(...args)(model),
-      extname: (...args) => extname(...args)(model),
+      // Eliminate the Readers by using the created model
+      listFiles: P.flow(listFiles, (r) => r(model)),
+      getFileType: P.flow(getFileType, (r) => r(model)),
+      exists: P.flow(exists, (r) => r(model)),
+      readFile: P.flow(readFile, (r) => r(model)),
+      writeFile: P.flow(writeFile, (r) => r(model)),
+      deleteFile: P.flow(deleteFile, (r) => r(model)),
+      createDirectory: P.flow(createDirectory, (r) => r(model)),
+      removeDirectory: P.flow(removeDirectory, (r) => r(model)),
+      getFileReadStream: P.flow(getFileReadStream, (r) => r(model)),
+      getFileLineReadStream: P.flow(getFileLineReadStream, (r) => r(model)),
+      getFileWriteStream: P.flow(getFileWriteStream, (r) => r(model)),
+      getFileAppendWriteStream: P.flow(getFileAppendWriteStream, (r) => r(model)),
+      dirName: P.flow(dirName, (r) => r(model)),
+      fileName: P.flow(fileName, (r) => r(model)),
+      joinPath: P.flow(joinPath, (r) => r(model)),
+      relative: P.flow(relative, (r) => r(model)),
+      extname: P.flow(extname, (r) => r(model)),
     };
   };
 }

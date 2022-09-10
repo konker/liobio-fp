@@ -1,13 +1,16 @@
 // tslint:disable-next-line:no-var-requires
-import * as P from '../prelude';
-import _readline from 'readline';
 import _path from 'path';
-import { DataAccessor, FileType } from './DataAccessor';
-import PromiseDependentWritableStream from '../stream/PromiseDependentWritableStream';
-import * as s3Utils from '../utils/s3-uri-utils';
-import { S3Url } from '../utils/s3-uri-utils';
-import { Readable, Writable } from 'stream';
+import _readline from 'readline';
+import type { Readable, Writable } from 'stream';
 
+import * as P from '../prelude';
+import { PromiseDependentWritableStream } from '../stream/PromiseDependentWritableStream';
+import type { S3Url } from '../utils/s3-uri-utils';
+import * as s3Utils from '../utils/s3-uri-utils';
+import type { DataAccessor } from './DataAccessor';
+import { FileType } from './DataAccessor';
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const AWS = require('aws-sdk');
 
 type Model = {
@@ -43,7 +46,7 @@ function listFiles(s3url: S3Url): P.ReaderTaskEither<Model, string, Array<string
           .filter((item) => item[key]) // Drop any bad keys
           .map(
             //[FIXME:fp naive]
-            (item) => relative(parsed.Path, item[key])(model).split(model.path.posix.sep).shift() as string, // Extract the last part of the path relative to the prefix
+            (item) => relative(parsed.Path, item[key])(model).split(model.path.posix.sep).shift() as string // Extract the last part of the path relative to the prefix
           )
           .filter((item) => item !== '')
           .map((item: string) => s3Utils.createS3Url(parsed.Bucket, parsed.Path, item)); // Convert each item to full S3 url
@@ -150,9 +153,9 @@ function createDirectory(s3url: S3Url): P.ReaderTaskEither<Model, string, void> 
                 Key: parsed.FullPath,
               })
               .promise();
-          }),
+          })
         )(), //[FIXME:fp naive]
-      String,
+      String
     );
 }
 
@@ -196,13 +199,13 @@ function removeDirectory(s3url: S3Url): P.ReaderTaskEither<Model, string, void> 
                         return deleteFile(s3FileUrl)(model);
                       }
                     }),
-                    (x) => x,
-                  ),
-                ),
+                    (x) => x
+                  )
+                )
               ),
               (x) => x,
               // P.Task_.sequenceArray(P.Task_.ApplySeq),
-              (x) => x,
+              (x) => x
             )(); //[FIXME:fp naive]
 
             // Delete the directory object itself (is this needed?)
@@ -212,9 +215,9 @@ function removeDirectory(s3url: S3Url): P.ReaderTaskEither<Model, string, void> 
                 Key: parsed.FullPath,
               })
               .promise();
-          }),
+          })
         )(), //[FIXME:fp naive]
-      String,
+      String
     );
 }
 
@@ -241,9 +244,9 @@ function getFileLineReadStream(s3url: S3Url): P.ReaderTaskEither<Model, string, 
               crlfDelay: Infinity,
               escapeCodeTimeout: 10000,
             }),
-          String,
-        ),
-      ),
+          String
+        )
+      )
     );
 }
 
@@ -299,22 +302,23 @@ export function s3DataAccessor(): P.Task<DataAccessor> {
       PATH_SEP: _path.posix.sep,
       ID: 'S3DataAccessor',
 
-      listFiles: (...args) => listFiles(...args)(model),
-      getFileType: (...args) => getFileType(...args)(model),
-      exists: (...args) => exists(...args)(model),
-      readFile: (...args) => readFile(...args)(model),
-      writeFile: (...args) => writeFile(...args)(model),
-      deleteFile: (...args) => deleteFile(...args)(model),
-      createDirectory: (...args) => createDirectory(...args)(model),
-      removeDirectory: (...args) => removeDirectory(...args)(model),
-      getFileReadStream: (...args) => getFileReadStream(...args)(model),
-      getFileLineReadStream: (...args) => getFileLineReadStream(...args)(model),
-      getFileWriteStream: (...args) => getFileWriteStream(...args)(model),
-      dirName: (...args) => dirName(...args)(model),
-      fileName: (...args) => fileName(...args)(model),
-      joinPath: (...args) => joinPath(...args)(model),
-      relative: (...args) => relative(...args)(model),
-      extname: (...args) => extname(...args)(model),
+      // Eliminate the Readers by using the created model
+      listFiles: P.flow(listFiles, (r) => r(model)),
+      getFileType: P.flow(getFileType, (r) => r(model)),
+      exists: P.flow(exists, (r) => r(model)),
+      readFile: P.flow(readFile, (r) => r(model)),
+      writeFile: P.flow(writeFile, (r) => r(model)),
+      deleteFile: P.flow(deleteFile, (r) => r(model)),
+      createDirectory: P.flow(createDirectory, (r) => r(model)),
+      removeDirectory: P.flow(removeDirectory, (r) => r(model)),
+      getFileReadStream: P.flow(getFileReadStream, (r) => r(model)),
+      getFileLineReadStream: P.flow(getFileLineReadStream, (r) => r(model)),
+      getFileWriteStream: P.flow(getFileWriteStream, (r) => r(model)),
+      dirName: P.flow(dirName, (r) => r(model)),
+      fileName: P.flow(fileName, (r) => r(model)),
+      joinPath: P.flow(joinPath, (r) => r(model)),
+      relative: P.flow(relative, (r) => r(model)),
+      extname: P.flow(extname, (r) => r(model)),
     };
   };
 }

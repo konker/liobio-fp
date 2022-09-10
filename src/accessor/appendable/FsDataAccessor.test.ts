@@ -1,11 +1,12 @@
 import fs from 'fs';
 import readline from 'readline';
-import { PassThrough, Readable, Writable } from 'stream';
-import { FileType } from '../DataAccessor';
-import { fsDataAccessor } from './FsDataAccessor';
-import sinon from 'sinon';
-import { AppendableDataAccessor } from './AppendableDataAccessor';
 import { fromTask, fromTaskEither, fromTaskOption } from 'ruins-ts';
+import sinon from 'sinon';
+import { PassThrough, Readable, Writable } from 'stream';
+
+import { FileType } from '../DataAccessor';
+import type { AppendableDataAccessor } from './AppendableDataAccessor';
+import { fsDataAccessor } from './FsDataAccessor';
 
 describe('DataAccessor', () => {
   const sandbox = sinon.createSandbox();

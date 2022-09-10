@@ -1,7 +1,8 @@
 // [XXX: need to require AWS to be able to mock it in this way]
-// tslint:disable-next-line:no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const AWS = require('aws-sdk');
 import sinon from 'sinon';
+
 import * as s3UriUtils from './s3-uri-utils';
 
 describe('S3 URI Utils', () => {
@@ -94,10 +95,10 @@ describe('S3 URI Utils', () => {
 
     it('should fail correctly', () => {
       expect(() => s3UriUtils.parseS3Url('http://foobucket/bar/baz/qux.csv')).toThrow(
-        '[s3-uri-utils] Incorrect protocol',
+        '[s3-uri-utils] Incorrect protocol'
       );
       expect(() => s3UriUtils.parseS3Url('s3://FooBucket/bar/baz/qux.csv')).toThrow(
-        's3-uri-utils] S3 URLs must have a lower case bucket component',
+        's3-uri-utils] S3 URLs must have a lower case bucket component'
       );
       expect(() => s3UriUtils.parseS3Url('s3://')).toThrow('[s3-uri-utils] Could not determine bucket name');
     });
@@ -114,8 +115,8 @@ describe('S3 URI Utils', () => {
             .stub()
             .callsFake((_, params) =>
               Promise.resolve(
-                `https://${params.Bucket}.s3.eu-west-1.amazonaws.com/${params.Key}?AWSAccessKeyId=blahblah&signature=blahblah`,
-              ),
+                `https://${params.Bucket}.s3.eu-west-1.amazonaws.com/${params.Key}?AWSAccessKeyId=blahblah&signature=blahblah`
+              )
             ),
         };
       });

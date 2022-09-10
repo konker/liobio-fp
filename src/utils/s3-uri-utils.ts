@@ -63,7 +63,7 @@ export function parseS3Url(s3url: string): S3UrlData {
   }
   if (parsed.host !== parsed.host.toLowerCase()) {
     throw new TypeError(
-      `[s3-uri-utils] S3 URLs must have a lower case bucket component (note that S3 itself is case sensitive): ${s3url}`,
+      `[s3-uri-utils] S3 URLs must have a lower case bucket component (note that S3 itself is case sensitive): ${s3url}`
     );
   }
 
