@@ -1,6 +1,7 @@
-## lib/io
+## libio-fp
 
-A general-purpose library for performing file input/output operations.
+A general-purpose library for performing file input/output operations
+in a functional style using [fp-ts](https://gcanti.github.io/fp-ts/).
 
 Currently, this supports the following features:
 
@@ -10,10 +11,3 @@ Currently, this supports the following features:
 - CSV data format reading and writing
 - JSON data format reading and writing
 - [NDJSON](http://ndjson.org/) data format reading and writing
-- Reading of filesystem trees
-    - pluggable crawling strategies (DepthFirstTreeCrawler currently implemented)
-    - pluggable filtering modules, independently configurable for file and directories
-    - pluggable handler modules for dealing with crawler output, independently configurable for files and directories
-    - pre-configured tree readers for common data formats, e.g.
-        - JsonFileTreeReader
-        - CsvFileTreeReader
