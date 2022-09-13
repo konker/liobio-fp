@@ -2,7 +2,7 @@ import type { Writable } from 'stream';
 
 import type * as P from '../../../prelude';
 import type { JsonData } from '../../../types';
-import { close, write } from '../FileWriter';
+import { close, open, write } from '../FileWriter';
 import type { AppendableFileWriter } from './AppendableFileWriter';
 import { openForAppend } from './AppendableFileWriter';
 
@@ -23,6 +23,7 @@ function _write(fp: Writable, data: Data): P.TaskEither<string, void> {
 
 export function ndJsonAppendableFileWriter(): AppendableFileWriter<Data> {
   return {
+    open,
     openForAppend,
     write: _write,
     close,

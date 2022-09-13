@@ -4,7 +4,7 @@ import type { Writable } from 'stream';
 
 import * as P from '../../../prelude';
 import type { CsvData } from '../../../types';
-import { close, write } from '../FileWriter';
+import { close, open, write } from '../FileWriter';
 import type { AppendableFileWriter } from './AppendableFileWriter';
 import { openForAppend } from './AppendableFileWriter';
 
@@ -29,6 +29,7 @@ export function csvAppendableFileWriter(csvOptions: csvStringify.Options): Appen
   };
 
   return {
+    open,
     openForAppend,
     write: P.flow(_write, (r) => r(model)),
     close,
