@@ -7,7 +7,7 @@ export type Data = string | Buffer;
 /**
  * Default implementation of FileWriter for string | Buffer
  */
-export function defaultAppendableFileWriter(): AppendableFileWriter<Data> {
+export function defaultFileWriter(): AppendableFileWriter<Data> {
   return {
     open,
     openForAppend,

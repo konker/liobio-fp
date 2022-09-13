@@ -9,7 +9,7 @@ import type { FileWriter } from '../FileWriter';
  *
  * @template T - The type of thing that can be written
  */
-export type AppendableFileWriter<T> = Omit<FileWriter<T>, 'open'> & {
+export type AppendableFileWriter<T> = FileWriter<T> & {
   /**
    * Open the given file for appending
    */

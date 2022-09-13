@@ -21,16 +21,11 @@ export function fileCopier(
     P.TaskEither_.Do,
     P.TaskEither_.bind('readStream', () => fromDataAccessor.getFileReadStream(fromFile)),
     P.TaskEither_.bind('writeStream', () => toDataAccessor.getFileWriteStream(toFile)),
-    P.TaskEither_.chainW(({ readStream, writeStream }) =>
-      P.TaskEither_.tryCatch(async () => {
-        console.log('KONK93', readStream);
-        console.log('KONK94', writeStream);
-        if (writeStream instanceof PromiseDependentWritableStream) {
-          return waitForPromiseDependentStreamPipe(readStream, writeStream as PromiseDependentWritableStream);
-        }
-        return waitForStreamPipe(readStream, writeStream);
-      }, String)
-    ),
-    (x) => x
+    P.TaskEither_.chain(({ readStream, writeStream }) => {
+      if (writeStream instanceof PromiseDependentWritableStream) {
+        return waitForPromiseDependentStreamPipe(readStream, writeStream as PromiseDependentWritableStream);
+      }
+      return waitForStreamPipe(readStream, writeStream);
+    })
   );
 }

@@ -23,7 +23,7 @@ function _write(fp: Writable, data: Data): P.ReaderTaskEither<Model, string, voi
   return ({ csvOptions }) => write(fp, csvStringifierSync([data], csvOptions));
 }
 
-export function csvAppendableFileWriter(csvOptions: csvStringify.Options): AppendableFileWriter<Data> {
+export function csvFileWriter(csvOptions: csvStringify.Options): AppendableFileWriter<Data> {
   const model: Model = {
     csvOptions,
   };

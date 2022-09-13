@@ -1,3 +1,4 @@
+import type * as t from 'io-ts';
 import type readline from 'readline';
 import type { Readable, Writable } from 'stream';
 
@@ -9,6 +10,24 @@ export enum FileType {
   Other = 'Other',
 }
 
+export function fileTypeIsDirectory(fileType: FileType): fileType is FileType.Directory {
+  return fileType === FileType.Directory;
+}
+
+export function fileTypeIsFile(fileType: FileType): fileType is FileType.File {
+  return fileType === FileType.File;
+}
+
+export function fileTypeIsOther(fileType: FileType): fileType is FileType.Other {
+  return fileType === FileType.Other;
+}
+
+export type DirectoryPath = t.Branded<string, { readonly DirectoryPath: unique symbol }>;
+export type FileName = t.Branded<string, { readonly FileName: unique symbol }>;
+export type IoUrl = t.Branded<string, { readonly URL: unique symbol }>;
+export type Path = DirectoryPath | FileName;
+export type Ref = Path | IoUrl;
+
 export type DataAccessor = {
   readonly ID: string;
   readonly PATH_SEP: string;
@@ -18,14 +37,14 @@ export type DataAccessor = {
    *
    * @param dirPath - The full path to the directory to list
    */
-  listFiles: (dirPath: string) => P.TaskEither<string, Array<string>>;
+  listFiles: (dirPath: string) => P.TaskEither<string, Array<Ref>>;
 
   /**
    * Resolve the type of the given file or directory
    *
    * @param filePath - The full path to the file or directory
    */
-  getFileType: (filePath: string) => P.Task<FileType>;
+  getFileType: (filePath: string) => P.TaskEither<string, FileType>;
 
   /**
    * Check if the given file or directory path exists
@@ -100,21 +119,21 @@ export type DataAccessor = {
    *
    * @param filePath - The full path of the file
    */
-  dirName: (filePath: string) => P.Task<string>;
+  dirName: (filePath: string) => P.TaskEither<string, Ref>;
 
   /**
    * Extract the file name from a file path
    *
    * @param filePath - The full path of the file
    */
-  fileName: (filePath: string) => P.TaskOption<string>;
+  fileName: (filePath: string) => P.TaskEither<string, P.Option<Ref>>;
 
   /**
    * Join the given parts into a full path
    *
    * @param parts - The parts of the path to join
    */
-  joinPath: (...parts: Array<string>) => string;
+  joinPath: (...parts: Array<string>) => P.Either<string, Ref>;
 
   /**
    * Get a relative path from one full path to another full path
@@ -122,7 +141,7 @@ export type DataAccessor = {
    * @param from - A full file or directory path
    * @param to - A full file or directory path
    */
-  relative: (from: string, to: string) => string;
+  relative: (from: string, to: string) => Ref;
 
   /**
    * Extract the file name extension from the given file path

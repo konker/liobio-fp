@@ -23,8 +23,8 @@ describe('FileCopier', () => {
         fromDataAccessor = await fromTask(fsDataAccessor());
         toDataAccessor = await fromTask(fsDataAccessor());
 
-        stub1 = sandbox.stub(fromDataAccessor, 'getFileReadStream').resolves(P.TaskEither_.of(Readable.from(TEST_S)));
-        stub2 = sandbox.stub(toDataAccessor, 'getFileWriteStream').resolves(P.TaskEither_.of(new PassThrough()));
+        stub1 = sandbox.stub(fromDataAccessor, 'getFileReadStream').returns(P.TaskEither_.of(Readable.from(TEST_S)));
+        stub2 = sandbox.stub(toDataAccessor, 'getFileWriteStream').returns(P.TaskEither_.of(new PassThrough()));
       });
       afterAll(() => {
         sandbox.restore();
@@ -49,8 +49,8 @@ describe('FileCopier', () => {
         });
         fromDataAccessor = await fromTask(fsDataAccessor());
         toDataAccessor = await fromTask(fsDataAccessor());
-        stub1 = sandbox.stub(fromDataAccessor, 'getFileReadStream').resolves(P.TaskEither_.of(Readable.from(TEST_S)));
-        stub2 = sandbox.stub(toDataAccessor, 'getFileWriteStream').resolves(P.TaskEither_.of(writeStream));
+        stub1 = sandbox.stub(fromDataAccessor, 'getFileReadStream').returns(P.TaskEither_.of(Readable.from(TEST_S)));
+        stub2 = sandbox.stub(toDataAccessor, 'getFileWriteStream').returns(P.TaskEither_.of(writeStream));
       });
       afterAll(() => {
         sandbox.restore();

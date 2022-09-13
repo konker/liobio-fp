@@ -1,8 +1,12 @@
+import { fromEither, fromTaskEither } from 'ruins-ts';
+
 // [XXX: need to require AWS to be able to mock it in this way]
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const AWS = require('aws-sdk');
 import sinon from 'sinon';
 
+import { FileType } from '../accessor/DataAccessor';
+import type { S3IoUrl } from './s3-uri-utils';
 import * as s3UriUtils from './s3-uri-utils';
 
 describe('S3 URI Utils', () => {
@@ -55,52 +59,60 @@ describe('S3 URI Utils', () => {
 
   describe('parseS3Url', () => {
     it('should function correctly', () => {
-      expect(s3UriUtils.parseS3Url('s3://foobucket/bar/baz/qux.csv')).toStrictEqual({
+      expect(fromEither(s3UriUtils.parseS3Url('s3://foobucket/bar/baz/qux.csv'))).toStrictEqual({
         Bucket: 'foobucket',
         Path: 'bar/baz/',
         File: 'qux.csv',
+        Type: FileType.File,
         FullPath: 'bar/baz/qux.csv',
       });
-      expect(s3UriUtils.parseS3Url('s3://foobucket/bar/baz/')).toStrictEqual({
+      expect(fromEither(s3UriUtils.parseS3Url('s3://foobucket/bar/baz/'))).toStrictEqual({
         Bucket: 'foobucket',
         Path: 'bar/baz/',
         File: undefined,
+        Type: FileType.Directory,
         FullPath: 'bar/baz/',
       });
-      expect(s3UriUtils.parseS3Url('s3://foobucket/bar/baz')).toStrictEqual({
+      expect(fromEither(s3UriUtils.parseS3Url('s3://foobucket/bar/baz'))).toStrictEqual({
         Bucket: 'foobucket',
         Path: 'bar/baz/',
         File: undefined,
+        Type: FileType.Directory,
         FullPath: 'bar/baz/',
       });
-      expect(s3UriUtils.parseS3Url('s3://foobucket/bar/')).toStrictEqual({
+      expect(fromEither(s3UriUtils.parseS3Url('s3://foobucket/bar/'))).toStrictEqual({
         Bucket: 'foobucket',
         Path: 'bar/',
         File: undefined,
+        Type: FileType.Directory,
         FullPath: 'bar/',
       });
-      expect(s3UriUtils.parseS3Url('s3://foobucket/')).toStrictEqual({
+      expect(fromEither(s3UriUtils.parseS3Url('s3://foobucket/'))).toStrictEqual({
         Bucket: 'foobucket',
         Path: '',
         File: undefined,
+        Type: FileType.Directory,
         FullPath: '',
       });
-      expect(s3UriUtils.parseS3Url('s3://foobucket')).toStrictEqual({
+      expect(fromEither(s3UriUtils.parseS3Url('s3://foobucket'))).toStrictEqual({
         Bucket: 'foobucket',
         Path: '',
         File: undefined,
+        Type: FileType.Directory,
         FullPath: '',
       });
     });
 
     it('should fail correctly', () => {
-      expect(() => s3UriUtils.parseS3Url('http://foobucket/bar/baz/qux.csv')).toThrow(
+      expect(() => fromEither(s3UriUtils.parseS3Url('http://foobucket/bar/baz/qux.csv'))).toThrow(
         '[s3-uri-utils] Incorrect protocol'
       );
-      expect(() => s3UriUtils.parseS3Url('s3://FooBucket/bar/baz/qux.csv')).toThrow(
+      expect(() => fromEither(s3UriUtils.parseS3Url('s3://FooBucket/bar/baz/qux.csv'))).toThrow(
         's3-uri-utils] S3 URLs must have a lower case bucket component'
       );
-      expect(() => s3UriUtils.parseS3Url('s3://')).toThrow('[s3-uri-utils] Could not determine bucket name');
+      expect(() => fromEither(s3UriUtils.parseS3Url('s3://'))).toThrow(
+        '[s3-uri-utils] Could not determine bucket name'
+      );
     });
   });
 
@@ -127,9 +139,11 @@ describe('S3 URI Utils', () => {
     });
 
     it('should function correctly', async () => {
-      const s3url = 's3://foo/bar/baz.txt';
+      const s3url = 's3://foo/bar/baz.txt' as S3IoUrl;
 
-      expect(await s3UriUtils.createHttpsUrl(s3url)).toMatch(/^https:\/\/foo.s3.eu-west-1.amazonaws.com\/bar\/baz.txt/);
+      expect(await fromTaskEither(s3UriUtils.createHttpsUrl(s3url))).toMatch(
+        /^https:\/\/foo.s3.eu-west-1.amazonaws.com\/bar\/baz.txt/
+      );
     });
   });
 });

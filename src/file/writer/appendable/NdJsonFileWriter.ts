@@ -21,7 +21,7 @@ function _write(fp: Writable, data: Data): P.TaskEither<string, void> {
   return write(fp, JSON.stringify(data) + '\n');
 }
 
-export function ndJsonAppendableFileWriter(): AppendableFileWriter<Data> {
+export function ndJsonFileWriter(): AppendableFileWriter<Data> {
   return {
     open,
     openForAppend,

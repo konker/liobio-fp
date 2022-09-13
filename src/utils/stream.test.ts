@@ -1,3 +1,4 @@
+import { fromTaskEither } from 'ruins-ts';
 import { PassThrough, Readable } from 'stream';
 
 import { PromiseDependentWritableStream } from '../stream/PromiseDependentWritableStream';
@@ -9,7 +10,7 @@ describe('stream utils', () => {
       const readStream = Readable.from('konker');
       const writeStream = new PassThrough();
 
-      const data = await streamUtils.waitForStreamPipe(readStream, writeStream);
+      const data = await fromTaskEither(streamUtils.waitForStreamPipe(readStream, writeStream));
       expect(data).toBe(6);
     });
 
@@ -20,7 +21,9 @@ describe('stream utils', () => {
         writeStream.emit('error', new Error('Boom!'));
       });
 
-      await expect(streamUtils.waitForStreamPipe(readStream, writeStream)).rejects.toThrowError('Boom!');
+      await expect(fromTaskEither(streamUtils.waitForStreamPipe(readStream, writeStream))).rejects.toThrowError(
+        'Boom!'
+      );
     });
   });
 
@@ -32,7 +35,7 @@ describe('stream utils', () => {
         writeStream.on('finish', resolve);
       });
 
-      const data = await streamUtils.waitForPromiseDependentStreamPipe(readStream, writeStream);
+      const data = await fromTaskEither(streamUtils.waitForPromiseDependentStreamPipe(readStream, writeStream));
       expect(data).toBe(6);
     });
 
@@ -43,16 +46,18 @@ describe('stream utils', () => {
         writeStream.on('finish', () => reject(new Error('Access Denied')));
       });
 
-      await expect(streamUtils.waitForPromiseDependentStreamPipe(readStream, writeStream)).rejects.toThrowError();
+      await expect(
+        fromTaskEither(streamUtils.waitForPromiseDependentStreamPipe(readStream, writeStream))
+      ).rejects.toThrowError();
     });
 
     it('should reject if promise is missing', async () => {
       const readStream = Readable.from('konker');
       const writeStream = new PromiseDependentWritableStream();
 
-      await expect(streamUtils.waitForPromiseDependentStreamPipe(readStream, writeStream)).rejects.toThrowError(
-        'waitForPromiseDependentStreamPipe called without a stream promise'
-      );
+      await expect(
+        fromTaskEither(streamUtils.waitForPromiseDependentStreamPipe(readStream, writeStream))
+      ).rejects.toThrowError('waitForPromiseDependentStreamPipe called without a stream promise');
     });
   });
 });
