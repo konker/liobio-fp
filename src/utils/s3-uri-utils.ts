@@ -2,9 +2,9 @@ import * as AWS from 'aws-sdk';
 import path from 'path';
 import { URL } from 'url';
 
-import type { DirectoryPath, FileName, IoUrl } from '../accessor/DataAccessor';
-import { FileType } from '../accessor/DataAccessor';
 import * as P from '../prelude';
+import type { DirectoryPath, Err, FileName, IoUrl } from '../types';
+import { FileType, toErr } from '../types';
 
 export type S3IoUrl<S extends string = string> = IoUrl & `s3://${S}`;
 export const S3_PROTOCOL = 's3:';
@@ -57,11 +57,10 @@ export function createS3Url(bucket: string, dirPath?: string, part?: string): S3
 
 /**
  * Parse an S3 URL into its constituent parts
- * [FIXME:fp throws]
  *
  * @param {S3Url} s3url
  */
-export function parseS3Url(s3url: string): P.Either<string, S3UrlData> {
+export function parseS3Url(s3url: string): P.Either<Err, S3UrlData> {
   return P.Either_.tryCatch(() => {
     const parsed: ParsedUrl = { protocol: '', host: '', pathname: '' };
     try {
@@ -111,7 +110,7 @@ export function parseS3Url(s3url: string): P.Either<string, S3UrlData> {
       Type: fileComponent ? FileType.File : FileType.Directory,
       FullPath: fullPathComponent,
     };
-  }, String);
+  }, toErr);
 }
 
 /**
@@ -153,7 +152,7 @@ export function isS3File(part: string): boolean {
  *
  * @param {S3Url} s3url
  */
-export function createHttpsUrl(s3url: S3IoUrl): P.TaskEither<string, string> {
+export function createHttpsUrl(s3url: S3IoUrl): P.TaskEither<Err, string> {
   return P.pipe(
     parseS3Url(s3url),
     P.TaskEither_.fromEither,
@@ -163,7 +162,7 @@ export function createHttpsUrl(s3url: S3IoUrl): P.TaskEither<string, string> {
         const s3 = new AWS.S3({ region: process.env['AWS_REGION'] as string, apiVersion: '2006-03-01' });
 
         return s3.getSignedUrlPromise('getObject', params);
-      }, String)
+      }, toErr)
     )
   );
 }

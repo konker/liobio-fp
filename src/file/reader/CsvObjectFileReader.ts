@@ -2,7 +2,7 @@ import type csvParse from 'csv-parse';
 
 import type { DataAccessor } from '../../accessor/DataAccessor';
 import * as P from '../../prelude';
-import type { CsvObjectData } from '../../types';
+import type { CsvObjectData, Err } from '../../types';
 import { __read } from './CsvFileReader';
 import type { FileReader } from './FileReader';
 
@@ -11,7 +11,7 @@ type Model = {
 };
 export type Data = Array<CsvObjectData>;
 
-function _read(dataAccessor: DataAccessor, filePath: string): P.ReaderTaskEither<Model, string, Data> {
+function _read(dataAccessor: DataAccessor, filePath: string): P.ReaderTaskEither<Model, Err, Data> {
   return __read(dataAccessor, filePath);
 }
 

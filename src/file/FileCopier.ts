@@ -1,6 +1,7 @@
 import type { DataAccessor } from '../accessor/DataAccessor';
 import * as P from '../prelude';
 import { PromiseDependentWritableStream } from '../stream/PromiseDependentWritableStream';
+import type { Err } from '../types';
 import { waitForPromiseDependentStreamPipe, waitForStreamPipe } from '../utils/stream';
 
 /**
@@ -16,7 +17,7 @@ export function fileCopier(
   fromFile: string,
   toDataAccessor: DataAccessor,
   toFile: string
-): P.TaskEither<string, number> {
+): P.TaskEither<Err, number> {
   return P.pipe(
     P.TaskEither_.Do,
     P.TaskEither_.bind('readStream', () => fromDataAccessor.getFileReadStream(fromFile)),

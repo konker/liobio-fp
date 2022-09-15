@@ -1,15 +1,15 @@
 import type { DataAccessor } from '../../accessor/DataAccessor';
 import * as P from '../../prelude';
-import type { JsonData } from '../../types';
+import type { Err, JsonData } from '../../types';
+import { toErr } from '../../types';
 import type { FileReader } from './FileReader';
 
 export type Data = Array<JsonData>;
 
 /*[XXX:remove this whole module, and only have one NdJsonReader (line reader)*/
-function read(dataAccessor: DataAccessor, filePath: string): P.TaskEither<string, Data> {
+function read(dataAccessor: DataAccessor, filePath: string): P.TaskEither<Err, Data> {
   return P.pipe(
     dataAccessor.getFileLineReadStream(filePath),
-    (x) => x,
     P.TaskEither_.chain((fp) =>
       P.TaskEither_.tryCatch(async (): Promise<Data> => {
         const data: Data = [];
@@ -17,7 +17,7 @@ function read(dataAccessor: DataAccessor, filePath: string): P.TaskEither<string
           data.push(JSON.parse(line));
         }
         return data;
-      }, String)
+      }, toErr)
     )
   );
 }

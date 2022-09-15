@@ -3,7 +3,7 @@ import csvParserSync from 'csv-parse/lib/sync';
 
 import type { DataAccessor } from '../../../accessor/DataAccessor';
 import * as P from '../../../prelude';
-import type { CsvData } from '../../../types';
+import type { CsvData, Err } from '../../../types';
 import type { FileLineReader, FileLineReaderHandle } from './FileLineReader';
 import { close, readLine } from './FileLineReader';
 
@@ -24,7 +24,7 @@ export type Data = CsvData;
 function _open(
   dataAccessor: DataAccessor,
   filePath: string
-): P.ReaderTaskEither<Model, string, FileLineReaderHandle<Data>> {
+): P.ReaderTaskEither<Model, Err, FileLineReaderHandle<Data>> {
   return ({ csvOptions }) =>
     P.pipe(
       dataAccessor.getFileLineReadStream(filePath),

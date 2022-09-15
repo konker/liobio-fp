@@ -2,6 +2,8 @@ import type { Writable } from 'stream';
 
 import type { DataAccessor } from '../../accessor/DataAccessor';
 import * as P from '../../prelude';
+import type { Err } from '../../types';
+import { toErr } from '../../types';
 
 /**
  * File writer interface
@@ -15,7 +17,7 @@ export type FileWriter<T> = {
    * @param dataAccessor
    * @param filePath - The full path of the file to write
    */
-  open: (dataAccessor: DataAccessor, filePath: string) => P.TaskEither<string, Writable>;
+  open: (dataAccessor: DataAccessor, filePath: string) => P.TaskEither<Err, Writable>;
 
   /**
    * Write the given data to the file
@@ -23,7 +25,7 @@ export type FileWriter<T> = {
    * @param fp - The stream to write to
    * @param data - The data to write
    */
-  write: (fp: Writable, data: T) => P.TaskEither<string, void>;
+  write: (fp: Writable, data: T) => P.TaskEither<Err, void>;
 
   /**
    * Close the file and clean up resources as needed
@@ -39,7 +41,7 @@ export type FileWriter<T> = {
  * @param dataAccessor
  * @param filePath
  */
-export function open(dataAccessor: DataAccessor, filePath: string): P.TaskEither<string, Writable> {
+export function open(dataAccessor: DataAccessor, filePath: string): P.TaskEither<Err, Writable> {
   return dataAccessor.getFileWriteStream(filePath);
 }
 
@@ -49,10 +51,10 @@ export function open(dataAccessor: DataAccessor, filePath: string): P.TaskEither
  * @param fp
  * @param data
  */
-export function write<T>(fp: Writable, data: T): P.TaskEither<string, void> {
+export function write<T>(fp: Writable, data: T): P.TaskEither<Err, void> {
   return P.TaskEither_.tryCatch(async () => {
     fp.write(data);
-  }, String);
+  }, toErr);
 }
 
 /**

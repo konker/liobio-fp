@@ -4,8 +4,8 @@ import _readline from 'readline';
 import type { Readable, Writable } from 'stream';
 
 import * as P from '../../prelude';
-import type { DirectoryPath, FileName, Path } from '../DataAccessor';
-import { FileType, fileTypeIsFile } from '../DataAccessor';
+import type { DirectoryPath, Err, FileName, Path } from '../../types';
+import { FileType, fileTypeIsFile, toErr } from '../../types';
 import type { AppendableDataAccessor } from './AppendableDataAccessor';
 
 type Model = {
@@ -14,67 +14,68 @@ type Model = {
   readonly readline: typeof _readline;
 };
 
-function listFiles(dirPath: string): P.ReaderTaskEither<Model, string, Array<Path>> {
+function listFiles(dirPath: string): P.ReaderTaskEither<Model, Err, Array<Path>> {
   return (model) =>
     P.TaskEither_.tryCatch(async () => {
       const files = await model.fs.promises.readdir(dirPath);
       return files.map((file) => model.path.join(dirPath, file) as Path);
-    }, String);
+    }, toErr);
 }
 
-function getFileType(filePath: string): P.ReaderTaskEither<Model, string, FileType> {
+function getFileType(filePath: string): P.ReaderTaskEither<Model, Err, FileType> {
   return (model) =>
     P.TaskEither_.tryCatch(async () => {
       const stat = await model.fs.promises.lstat(filePath);
       if (stat.isFile()) return FileType.File;
       if (stat.isDirectory()) return FileType.Directory;
       return FileType.Other;
-    }, String);
+    }, toErr);
 }
 
-function exists(fileOrDirPath: string): P.ReaderTaskEither<Model, string, boolean> {
-  return (model) => P.TaskEither_.tryCatch(async () => model.fs.existsSync(fileOrDirPath), String);
+function exists(fileOrDirPath: string): P.ReaderTaskEither<Model, Err, boolean> {
+  return (model) => P.TaskEither_.tryCatch(async () => model.fs.existsSync(fileOrDirPath), toErr);
 }
 
-function readFile(filePath: string): P.ReaderTaskEither<Model, string, Buffer> {
-  return (model) => P.TaskEither_.tryCatch(async () => model.fs.promises.readFile(filePath), String);
+function readFile(filePath: string): P.ReaderTaskEither<Model, Err, Buffer> {
+  return (model) => P.TaskEither_.tryCatch(async () => model.fs.promises.readFile(filePath), toErr);
 }
 
-function writeFile(filePath: string, data: Buffer | string): P.ReaderTaskEither<Model, string, void> {
-  return (model) => P.TaskEither_.tryCatch(async () => model.fs.promises.writeFile(filePath, data), String);
+function writeFile(filePath: string, data: Buffer | string): P.ReaderTaskEither<Model, Err, void> {
+  return (model) => P.TaskEither_.tryCatch(async () => model.fs.promises.writeFile(filePath, data), toErr);
 }
 
-function deleteFile(filePath: string): P.ReaderTaskEither<Model, string, void> {
-  return (model) => P.TaskEither_.tryCatch(async () => model.fs.promises.unlink(filePath), String);
+function deleteFile(filePath: string): P.ReaderTaskEither<Model, Err, void> {
+  return (model) => P.TaskEither_.tryCatch(async () => model.fs.promises.unlink(filePath), toErr);
 }
 
-function createDirectory(dirPath: string): P.ReaderTaskEither<Model, string, void> {
+function createDirectory(dirPath: string): P.ReaderTaskEither<Model, Err, void> {
   return (model) =>
     P.TaskEither_.tryCatch(async () => {
       if (!model.fs.existsSync(dirPath)) {
         await model.fs.promises.mkdir(dirPath, { recursive: true });
       }
-    }, String);
+    }, toErr);
 }
 
-function removeDirectory(dirPath: string): P.ReaderTaskEither<Model, string, void> {
+function removeDirectory(dirPath: string): P.ReaderTaskEither<Model, Err, void> {
   return (model) =>
     P.TaskEither_.tryCatch(async () => {
       if (model.fs.existsSync(dirPath)) {
         await model.fs.promises.rmdir(dirPath, { recursive: true });
       }
-    }, String);
+    }, toErr);
 }
 
-function getFileReadStream(filePath: string): P.ReaderTaskEither<Model, string, Readable> {
-  return (model) => P.TaskEither_.tryCatch(async () => model.fs.createReadStream(filePath), String);
+function getFileReadStream(filePath: string): P.ReaderTaskEither<Model, Err, Readable> {
+  return (model) => P.TaskEither_.tryCatch(async () => model.fs.createReadStream(filePath), toErr);
 }
 
 //[FIXME:fp _readline?]
-function getFileLineReadStream(filePath: string): P.ReaderTaskEither<Model, string, _readline.Interface> {
+function getFileLineReadStream(filePath: string): P.ReaderTaskEither<Model, Err, _readline.Interface> {
   return (model) =>
     P.pipe(
-      getFileReadStream(filePath)(model), //[FIXME:fp naive?]
+      model,
+      getFileReadStream(filePath),
       P.TaskEither_.chain((readStream) =>
         P.TaskEither_.tryCatch(
           async () =>
@@ -85,23 +86,23 @@ function getFileLineReadStream(filePath: string): P.ReaderTaskEither<Model, stri
               crlfDelay: Infinity,
               escapeCodeTimeout: 10000,
             }),
-          String
+          toErr
         )
       )
     );
 }
 
-function getFileWriteStream(filePath: string): P.ReaderTaskEither<Model, string, Writable> {
+function getFileWriteStream(filePath: string): P.ReaderTaskEither<Model, Err, Writable> {
   return (model) =>
-    P.TaskEither_.tryCatch(async () => model.fs.createWriteStream(filePath, { flags: 'w', encoding: 'utf-8' }), String);
+    P.TaskEither_.tryCatch(async () => model.fs.createWriteStream(filePath, { flags: 'w', encoding: 'utf-8' }), toErr);
 }
 
-function getFileAppendWriteStream(filePath: string): P.ReaderTaskEither<Model, string, Writable> {
+function getFileAppendWriteStream(filePath: string): P.ReaderTaskEither<Model, Err, Writable> {
   return (model) =>
-    P.TaskEither_.tryCatch(async () => model.fs.createWriteStream(filePath, { flags: 'a', encoding: 'utf-8' }), String);
+    P.TaskEither_.tryCatch(async () => model.fs.createWriteStream(filePath, { flags: 'a', encoding: 'utf-8' }), toErr);
 }
 
-function dirName(filePath: string): P.ReaderTaskEither<Model, string, DirectoryPath> {
+function dirName(filePath: string): P.ReaderTaskEither<Model, Err, DirectoryPath> {
   return (model) =>
     P.pipe(
       model,
@@ -110,7 +111,7 @@ function dirName(filePath: string): P.ReaderTaskEither<Model, string, DirectoryP
     );
 }
 
-function fileName(filePath: string): P.ReaderTaskEither<Model, string, P.Option<FileName>> {
+function fileName(filePath: string): P.ReaderTaskEither<Model, Err, P.Option<FileName>> {
   return (model) =>
     P.pipe(
       model,
@@ -125,7 +126,7 @@ function fileName(filePath: string): P.ReaderTaskEither<Model, string, P.Option<
     );
 }
 
-function joinPath(...parts: Array<string>): P.ReaderEither<Model, string, Path> {
+function joinPath(...parts: Array<string>): P.ReaderEither<Model, Err, Path> {
   return (model) => P.Either_.of(model.path.join(...parts) as Path);
 }
 

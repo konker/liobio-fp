@@ -5,8 +5,8 @@ import type sinon from 'sinon';
 import { createSandbox } from 'sinon';
 import { PassThrough, Readable, Writable } from 'stream';
 
-import type { DirectoryPath } from '../DataAccessor';
-import { FileType } from '../DataAccessor';
+import type { DirectoryPath } from '../../types';
+import { FileType } from '../../types';
 import type { AppendableDataAccessor } from './AppendableDataAccessor';
 import { fsDataAccessor } from './FsDataAccessor';
 

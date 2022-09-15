@@ -3,7 +3,7 @@ import csvStringifierSync from 'csv-stringify/lib/sync';
 import type { Writable } from 'stream';
 
 import * as P from '../../../prelude';
-import type { CsvData } from '../../../types';
+import type { CsvData, Err } from '../../../types';
 import { close, open, write } from '../FileWriter';
 import type { AppendableFileWriter } from './AppendableFileWriter';
 import { openForAppend } from './AppendableFileWriter';
@@ -19,7 +19,7 @@ export type Data = CsvData;
  * Data is serialized as CSV based on the assumption that
  * the data param represents one record in the target CSV file
  */
-function _write(fp: Writable, data: Data): P.ReaderTaskEither<Model, string, void> {
+function _write(fp: Writable, data: Data): P.ReaderTaskEither<Model, Err, void> {
   return ({ csvOptions }) => write(fp, csvStringifierSync([data], csvOptions));
 }
 

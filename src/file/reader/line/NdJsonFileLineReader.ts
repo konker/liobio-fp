@@ -1,6 +1,6 @@
 import type { DataAccessor } from '../../../accessor/DataAccessor';
 import * as P from '../../../prelude';
-import type { JsonData } from '../../../types';
+import type { Err, JsonData } from '../../../types';
 import type { FileLineReader, FileLineReaderHandle } from './FileLineReader';
 import { close, readLine } from './FileLineReader';
 
@@ -15,7 +15,7 @@ export type Data = JsonData;
  * @param dataAccessor
  * @param filePath - The full path of the file to read
  */
-function _open(dataAccessor: DataAccessor, filePath: string): P.TaskEither<string, FileLineReaderHandle<Data>> {
+function _open(dataAccessor: DataAccessor, filePath: string): P.TaskEither<Err, FileLineReaderHandle<Data>> {
   return P.pipe(
     dataAccessor.getFileLineReadStream(filePath),
     P.TaskEither_.map((fp) => ({

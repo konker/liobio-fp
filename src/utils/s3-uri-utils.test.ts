@@ -5,7 +5,7 @@ import { fromEither, fromTaskEither } from 'ruins-ts';
 const AWS = require('aws-sdk');
 import sinon from 'sinon';
 
-import { FileType } from '../accessor/DataAccessor';
+import { FileType } from '../types';
 import type { S3IoUrl } from './s3-uri-utils';
 import * as s3UriUtils from './s3-uri-utils';
 

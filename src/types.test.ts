@@ -1,5 +1,5 @@
-import * as unit from './DataAccessor';
-import { FileType, fileTypeIsDirectory } from './DataAccessor';
+import * as unit from './types';
+import { FileType } from './types';
 
 describe('DataAccessor', () => {
   describe('fileTypeIsDirectory', () => {

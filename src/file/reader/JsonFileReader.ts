@@ -1,11 +1,11 @@
 import type { DataAccessor } from '../../accessor/DataAccessor';
 import * as P from '../../prelude';
-import type { JsonData } from '../../types';
+import type { Err, JsonData } from '../../types';
 import type { FileReader } from './FileReader';
 
 export type Data = JsonData;
 
-function read(dataAccessor: DataAccessor, filePath: string): P.TaskEither<string, Data> {
+function read(dataAccessor: DataAccessor, filePath: string): P.TaskEither<Err, Data> {
   //[FIXME:fp should wrap JSON.parse in a try/catch?]
   return P.pipe(
     dataAccessor.readFile(filePath),

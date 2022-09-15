@@ -5,11 +5,12 @@ import type { Readable, Writable } from 'stream';
 
 import * as P from '../prelude';
 import { PromiseDependentWritableStream } from '../stream/PromiseDependentWritableStream';
+import type { Err, FileName, Path } from '../types';
+import { FileType, toErr } from '../types';
 import type { S3IoUrl, S3UrlData, S3UrlDataDirectory, S3UrlDataFile } from '../utils/s3-uri-utils';
 import * as s3Utils from '../utils/s3-uri-utils';
 import { createS3Url, s3UrlDataIsDirectory, s3UrlDataIsFile } from '../utils/s3-uri-utils';
-import type { DataAccessor, FileName, IoUrl, Path } from './DataAccessor';
-import { FileType } from './DataAccessor';
+import type { DataAccessor } from './DataAccessor';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const AWS = require('aws-sdk');
@@ -20,8 +21,8 @@ type Model = {
   readline: typeof _readline;
 };
 
-//[FIXME:fp throws]
-function listFiles(s3url: string): P.ReaderTaskEither<Model, string, Array<S3IoUrl>> {
+//[FIXME:fp inner function?]
+function listFiles(s3url: string): P.ReaderTaskEither<Model, Err, Array<S3IoUrl>> {
   return (model) =>
     P.pipe(
       s3Utils.parseS3Url(s3url),
@@ -41,6 +42,7 @@ function listFiles(s3url: string): P.ReaderTaskEither<Model, string, Array<S3IoU
             .promise();
 
           if (allFiles.IsTruncated) {
+            //[FIXME:fp console?]
             // tslint:disable-next-line:no-console
             console.warn(`[S3DataAccessor] WARNING: listing is truncated: ${s3url}`);
           }
@@ -58,12 +60,12 @@ function listFiles(s3url: string): P.ReaderTaskEither<Model, string, Array<S3IoU
           }
 
           return _processList(allFiles.CommonPrefixes, 'Prefix').concat(_processList(allFiles.Contents, 'Key'));
-        }, String)
+        }, toErr)
       )
     );
 }
 
-function getFileType(s3url: string): P.TaskEither<string, FileType> {
+function getFileType(s3url: string): P.TaskEither<Err, FileType> {
   return P.pipe(
     s3Utils.parseS3Url(s3url),
     P.Either_.map((parsed) => parsed.Type),
@@ -71,7 +73,7 @@ function getFileType(s3url: string): P.TaskEither<string, FileType> {
   );
 }
 
-function exists(s3url: string): P.ReaderTaskEither<Model, string, boolean> {
+function exists(s3url: string): P.ReaderTaskEither<Model, Err, boolean> {
   function _head(parsed: S3UrlData): P.ReaderTaskEither<Model, unknown, boolean> {
     return (model) =>
       P.TaskEither_.tryCatch(async () => {
@@ -90,13 +92,13 @@ function exists(s3url: string): P.ReaderTaskEither<Model, string, boolean> {
     P.ReaderTask_.of,
     P.ReaderTaskEither_.chain(_head),
     P.ReaderTaskEither_.orElse((ex: unknown) =>
-      (ex as any).code === 'NotFound' ? P.ReaderTaskEither_.right(false) : P.ReaderTaskEither_.left(String(ex))
+      (ex as any).code === 'NotFound' ? P.ReaderTaskEither_.right(false) : P.ReaderTaskEither_.left(toErr(ex))
     )
   );
 }
 
-function readFile(s3url: string): P.ReaderTaskEither<Model, string, Buffer> {
-  function _get(parsed: S3UrlDataFile): P.ReaderTaskEither<Model, string, Buffer> {
+function readFile(s3url: string): P.ReaderTaskEither<Model, Err, Buffer> {
+  function _get(parsed: S3UrlDataFile): P.ReaderTaskEither<Model, Err, Buffer> {
     return (model) =>
       P.TaskEither_.tryCatch(async () => {
         const s3File = await model.s3.getObject({ Bucket: parsed.Bucket, Key: parsed.FullPath }).promise();
@@ -104,21 +106,21 @@ function readFile(s3url: string): P.ReaderTaskEither<Model, string, Buffer> {
         if (s3File.Body instanceof Buffer) return s3File.Body;
         if (!s3File.Body) return Buffer.from([]);
         return Buffer.from(s3File.Body as any);
-      }, String);
+      }, toErr);
   }
 
   return P.pipe(
     s3Utils.parseS3Url(s3url),
     P.Either_.chain(
-      P.Either_.fromPredicate(s3UrlDataIsFile, () => '[S3DataAccessor] Cannot read a file with a directory url')
+      P.Either_.fromPredicate(s3UrlDataIsFile, () => toErr('[S3DataAccessor] Cannot read a file with a directory url'))
     ),
     P.ReaderTask_.of,
     P.ReaderTaskEither_.chain(_get)
   );
 }
 
-function writeFile(s3url: string, data: Buffer | string): P.ReaderTaskEither<Model, string, void> {
-  function _put(parsed: S3UrlDataFile, data: Buffer | string): P.ReaderTaskEither<Model, string, void> {
+function writeFile(s3url: string, data: Buffer | string): P.ReaderTaskEither<Model, Err, void> {
+  function _put(parsed: S3UrlDataFile, data: Buffer | string): P.ReaderTaskEither<Model, Err, void> {
     return (model) =>
       P.TaskEither_.tryCatch(async () => {
         await model.s3
@@ -128,21 +130,21 @@ function writeFile(s3url: string, data: Buffer | string): P.ReaderTaskEither<Mod
             Body: data,
           })
           .promise();
-      }, String);
+      }, toErr);
   }
 
   return P.pipe(
     s3Utils.parseS3Url(s3url),
     P.Either_.chain(
-      P.Either_.fromPredicate(s3UrlDataIsFile, () => '[S3DataAccessor] Cannot write a file with a directory url')
+      P.Either_.fromPredicate(s3UrlDataIsFile, () => toErr('[S3DataAccessor] Cannot write a file with a directory url'))
     ),
     P.ReaderTask_.of,
     P.ReaderTaskEither_.chain((parsed) => _put(parsed, data))
   );
 }
 
-function deleteFile(s3url: string): P.ReaderTaskEither<Model, string, void> {
-  function _purgeRoot(parsed: S3UrlDataFile): P.ReaderTaskEither<Model, string, void> {
+function deleteFile(s3url: string): P.ReaderTaskEither<Model, Err, void> {
+  function _purgeRoot(parsed: S3UrlDataFile): P.ReaderTaskEither<Model, Err, void> {
     return (model) =>
       P.TaskEither_.tryCatch(async () => {
         await model.s3
@@ -151,21 +153,23 @@ function deleteFile(s3url: string): P.ReaderTaskEither<Model, string, void> {
             Key: parsed.FullPath,
           })
           .promise();
-      }, String);
+      }, toErr);
   }
 
   return P.pipe(
     s3Utils.parseS3Url(s3url),
     P.Either_.chain(
-      P.Either_.fromPredicate(s3UrlDataIsFile, () => '[S3DataAccessor] Cannot delete a file with a directory url')
+      P.Either_.fromPredicate(s3UrlDataIsFile, () =>
+        toErr('[S3DataAccessor] Cannot delete a file with a directory url')
+      )
     ),
     P.ReaderTask_.of,
     P.ReaderTaskEither_.chain(_purgeRoot)
   );
 }
 
-function createDirectory(s3url: string): P.ReaderTaskEither<Model, string, void> {
-  function _create(parsed: S3UrlDataDirectory): P.ReaderTaskEither<Model, string, void> {
+function createDirectory(s3url: string): P.ReaderTaskEither<Model, Err, void> {
+  function _create(parsed: S3UrlDataDirectory): P.ReaderTaskEither<Model, Err, void> {
     return (model) =>
       P.TaskEither_.tryCatch(async () => {
         await model.s3
@@ -174,15 +178,14 @@ function createDirectory(s3url: string): P.ReaderTaskEither<Model, string, void>
             Key: parsed.FullPath,
           })
           .promise();
-      }, String);
+      }, toErr);
   }
 
   return P.pipe(
     s3Utils.parseS3Url(s3url),
     P.Either_.chain(
-      P.Either_.fromPredicate(
-        s3UrlDataIsDirectory,
-        () => '[S3DataAccessor] Cannot create a directory with a non-directory url'
+      P.Either_.fromPredicate(s3UrlDataIsDirectory, () =>
+        toErr('[S3DataAccessor] Cannot create a directory with a non-directory url')
       )
     ),
     P.ReaderTask_.of,
@@ -190,8 +193,8 @@ function createDirectory(s3url: string): P.ReaderTaskEither<Model, string, void>
   );
 }
 
-function removeDirectory(s3url: string): P.ReaderTaskEither<Model, string, void> {
-  function _purgeItem(s3ItemUrl: S3IoUrl): P.ReaderTaskEither<Model, string, void> {
+function removeDirectory(s3url: string): P.ReaderTaskEither<Model, Err, void> {
+  function _purgeItem(s3ItemUrl: S3IoUrl): P.ReaderTaskEither<Model, Err, void> {
     return P.pipe(
       getFileType(s3ItemUrl),
       P.Reader_.of,
@@ -201,7 +204,7 @@ function removeDirectory(s3url: string): P.ReaderTaskEither<Model, string, void>
     );
   }
 
-  function _purgeRoot(parsed: S3UrlData): P.ReaderTaskEither<Model, string, void> {
+  function _purgeRoot(parsed: S3UrlData): P.ReaderTaskEither<Model, Err, void> {
     return (model) =>
       P.TaskEither_.tryCatch(async () => {
         await model.s3
@@ -210,7 +213,7 @@ function removeDirectory(s3url: string): P.ReaderTaskEither<Model, string, void>
             Key: parsed.FullPath,
           })
           .promise();
-      }, String);
+      }, toErr);
   }
 
   return P.pipe(
@@ -232,7 +235,7 @@ function removeDirectory(s3url: string): P.ReaderTaskEither<Model, string, void>
   );
 }
 
-function getFileReadStream(s3url: string): P.ReaderTaskEither<Model, string, Readable> {
+function getFileReadStream(s3url: string): P.ReaderTaskEither<Model, Err, Readable> {
   return (model) =>
     P.pipe(
       s3Utils.parseS3Url(s3url),
@@ -240,13 +243,13 @@ function getFileReadStream(s3url: string): P.ReaderTaskEither<Model, string, Rea
       P.TaskEither_.chain((parsed) =>
         P.TaskEither_.tryCatch(async () => {
           return model.s3.getObject({ Bucket: parsed.Bucket, Key: parsed.FullPath }).createReadStream() as Readable;
-        }, String)
+        }, toErr)
       )
     );
 }
 
 //[FIXME:fp _readline?]
-function getFileLineReadStream(s3url: string): P.ReaderTaskEither<Model, string, _readline.Interface> {
+function getFileLineReadStream(s3url: string): P.ReaderTaskEither<Model, Err, _readline.Interface> {
   return (model) =>
     P.pipe(
       model,
@@ -261,13 +264,13 @@ function getFileLineReadStream(s3url: string): P.ReaderTaskEither<Model, string,
               crlfDelay: Infinity,
               escapeCodeTimeout: 10000,
             }),
-          String
+          toErr
         )
       )
     );
 }
 
-function getFileWriteStream(s3url: string): P.ReaderTaskEither<Model, string, Writable> {
+function getFileWriteStream(s3url: string): P.ReaderTaskEither<Model, Err, Writable> {
   return (model) =>
     P.pipe(
       s3Utils.parseS3Url(s3url),
@@ -279,12 +282,12 @@ function getFileWriteStream(s3url: string): P.ReaderTaskEither<Model, string, Wr
             .upload({ Bucket: parsed.Bucket, Key: parsed.FullPath, Body: promiseDependentWritableStream })
             .promise();
           return promiseDependentWritableStream;
-        }, String)
+        }, toErr)
       )
     );
 }
 
-function dirName(filePath: string): P.ReaderTaskEither<Model, string, S3IoUrl> {
+function dirName(filePath: string): P.ReaderTaskEither<Model, Err, S3IoUrl> {
   return P.pipe(
     s3Utils.parseS3Url(filePath),
     P.Either_.map((parsed) => createS3Url(parsed.Bucket, parsed.Path)),
@@ -292,7 +295,7 @@ function dirName(filePath: string): P.ReaderTaskEither<Model, string, S3IoUrl> {
   );
 }
 
-function fileName(filePath: string): P.ReaderTaskEither<Model, string, P.Option<FileName>> {
+function fileName(filePath: string): P.ReaderTaskEither<Model, Err, P.Option<FileName>> {
   return P.pipe(
     s3Utils.parseS3Url(filePath),
     P.Either_.map((parsed) => P.pipe(parsed.File, P.Option_.fromNullable)),
@@ -300,7 +303,7 @@ function fileName(filePath: string): P.ReaderTaskEither<Model, string, P.Option<
   );
 }
 
-function joinPath(...parts: Array<string>): P.ReaderEither<Model, string, S3IoUrl | Path> {
+function joinPath(...parts: Array<string>): P.ReaderEither<Model, Err, S3IoUrl | Path> {
   return (model) => {
     if (!parts[0]) return P.Either_.right('' as Path);
     return parts[0].startsWith(s3Utils.S3_PROTOCOL)
@@ -315,11 +318,11 @@ function joinPath(...parts: Array<string>): P.ReaderEither<Model, string, S3IoUr
 }
 
 function relative(from: string, to: string): P.Reader<Model, S3IoUrl> {
-  return ({ path }) => path.posix.relative(from, to) as S3IoUrl;
+  return (model) => model.path.posix.relative(from, to) as S3IoUrl;
 }
 
 function extname(filePath: string): P.Reader<Model, string> {
-  return ({ path }) => path.posix.extname(filePath);
+  return (model) => model.path.posix.extname(filePath);
 }
 
 export function s3DataAccessor(): P.Task<DataAccessor> {

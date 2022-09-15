@@ -1,10 +1,11 @@
 import type { DataAccessor } from '../../accessor/DataAccessor';
 import type * as P from '../../prelude';
+import type { Err } from '../../types';
 import type { FileReader } from './FileReader';
 
 export type Data = Buffer;
 
-function read(dataAccessor: DataAccessor, filePath: string): P.TaskEither<string, Data> {
+function read(dataAccessor: DataAccessor, filePath: string): P.TaskEither<Err, Data> {
   return dataAccessor.readFile(filePath);
 }
 

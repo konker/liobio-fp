@@ -2,11 +2,13 @@ import type { Readable, Writable } from 'stream';
 
 import * as P from '../prelude';
 import type { PromiseDependentWritableStream } from '../stream/PromiseDependentWritableStream';
+import type { Err } from '../types';
+import { toErr } from '../types';
 
 /**
  * Wait for a readable stream to fully pipe to a write-stream
  */
-export function waitForStreamPipe(readStream: Readable, writeStream: Writable): P.TaskEither<string, number> {
+export function waitForStreamPipe(readStream: Readable, writeStream: Writable): P.TaskEither<Err, number> {
   return P.TaskEither_.tryCatch(
     () =>
       new Promise((resolve, reject) => {
@@ -17,7 +19,7 @@ export function waitForStreamPipe(readStream: Readable, writeStream: Writable): 
         readStream.pipe(writeStream);
         readStream.resume();
       }),
-    String
+    toErr
   );
 }
 
@@ -27,7 +29,7 @@ export function waitForStreamPipe(readStream: Readable, writeStream: Writable): 
 export function waitForPromiseDependentStreamPipe(
   readStream: Readable,
   writeStream: PromiseDependentWritableStream
-): P.TaskEither<string, number> {
+): P.TaskEither<Err, number> {
   return P.TaskEither_.tryCatch(
     () =>
       new Promise((resolve, reject) => {
@@ -38,6 +40,6 @@ export function waitForPromiseDependentStreamPipe(
         if (writeStream.promise) writeStream.promise.then(() => resolve(size)).catch(reject);
         else reject(Error('waitForPromiseDependentStreamPipe called without a stream promise'));
       }),
-    String
+    toErr
   );
 }

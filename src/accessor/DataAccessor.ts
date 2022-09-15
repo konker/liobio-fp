@@ -1,32 +1,8 @@
-import type * as t from 'io-ts';
 import type readline from 'readline';
 import type { Readable, Writable } from 'stream';
 
 import type * as P from '../prelude';
-
-export enum FileType {
-  Directory = 'Directory',
-  File = 'File',
-  Other = 'Other',
-}
-
-export function fileTypeIsDirectory(fileType: FileType): fileType is FileType.Directory {
-  return fileType === FileType.Directory;
-}
-
-export function fileTypeIsFile(fileType: FileType): fileType is FileType.File {
-  return fileType === FileType.File;
-}
-
-export function fileTypeIsOther(fileType: FileType): fileType is FileType.Other {
-  return fileType === FileType.Other;
-}
-
-export type DirectoryPath = t.Branded<string, { readonly DirectoryPath: unique symbol }>;
-export type FileName = t.Branded<string, { readonly FileName: unique symbol }>;
-export type IoUrl = t.Branded<string, { readonly URL: unique symbol }>;
-export type Path = DirectoryPath | FileName;
-export type Ref = Path | IoUrl;
+import type { Err, FileType, Ref } from '../types';
 
 export type DataAccessor = {
   readonly ID: string;
@@ -37,28 +13,28 @@ export type DataAccessor = {
    *
    * @param dirPath - The full path to the directory to list
    */
-  listFiles: (dirPath: string) => P.TaskEither<string, Array<Ref>>;
+  listFiles: (dirPath: string) => P.TaskEither<Err, Array<Ref>>;
 
   /**
    * Resolve the type of the given file or directory
    *
    * @param filePath - The full path to the file or directory
    */
-  getFileType: (filePath: string) => P.TaskEither<string, FileType>;
+  getFileType: (filePath: string) => P.TaskEither<Err, FileType>;
 
   /**
    * Check if the given file or directory path exists
    *
    * @param fileOrDirPath - The full path to the file or directory to test
    */
-  exists: (fileOrDirPath: string) => P.TaskEither<string, boolean>;
+  exists: (fileOrDirPath: string) => P.TaskEither<Err, boolean>;
 
   /**
    * Read the content of the given file into a Buffer
    *
    * @param filePath - The full path of the file to read
    */
-  readFile: (filePath: string) => P.TaskEither<string, Buffer>;
+  readFile: (filePath: string) => P.TaskEither<Err, Buffer>;
 
   /**
    * Write the given data into the given file
@@ -66,14 +42,14 @@ export type DataAccessor = {
    * @param filePath - The full path of the file to write
    * @param Buffer} data - The data to write
    */
-  writeFile: (filePath: string, data: string | Buffer) => P.TaskEither<string, void>;
+  writeFile: (filePath: string, data: string | Buffer) => P.TaskEither<Err, void>;
 
   /**
    * Delete the given file
    *
    * @param filePath - The full path of the file to delete
    */
-  deleteFile: (filePath: string) => P.TaskEither<string, void>;
+  deleteFile: (filePath: string) => P.TaskEither<Err, void>;
 
   /**
    * Create the given directory
@@ -82,7 +58,7 @@ export type DataAccessor = {
    *
    * @param dirPath - The full path of the directory to create
    */
-  createDirectory: (dirPath: string) => P.TaskEither<string, void>;
+  createDirectory: (dirPath: string) => P.TaskEither<Err, void>;
 
   /**
    * Remove the given directory
@@ -91,49 +67,49 @@ export type DataAccessor = {
    *
    * @param dirPath - The full path of the directory to remove
    */
-  removeDirectory: (dirPath: string) => P.TaskEither<string, void>;
+  removeDirectory: (dirPath: string) => P.TaskEither<Err, void>;
 
   /**
    * Get a read stream for the given file
    *
    * @param filePath
    */
-  getFileReadStream: (filePath: string) => P.TaskEither<string, Readable>;
+  getFileReadStream: (filePath: string) => P.TaskEither<Err, Readable>;
 
   /**
    * Get a stream which will read the given file line by line
    *
    * @param filePath - THe full path of the file to read
    */
-  getFileLineReadStream: (filePath: string) => P.TaskEither<string, readline.Interface>;
+  getFileLineReadStream: (filePath: string) => P.TaskEither<Err, readline.Interface>;
 
   /**
    * Get a stream to write to the given file
    *
    * @param filePath - The full path of the file
    */
-  getFileWriteStream: (filePath: string) => P.TaskEither<string, Writable>;
+  getFileWriteStream: (filePath: string) => P.TaskEither<Err, Writable>;
 
   /**
    * Get the parent directory path from the given file path
    *
    * @param filePath - The full path of the file
    */
-  dirName: (filePath: string) => P.TaskEither<string, Ref>;
+  dirName: (filePath: string) => P.TaskEither<Err, Ref>;
 
   /**
    * Extract the file name from a file path
    *
    * @param filePath - The full path of the file
    */
-  fileName: (filePath: string) => P.TaskEither<string, P.Option<Ref>>;
+  fileName: (filePath: string) => P.TaskEither<Err, P.Option<Ref>>;
 
   /**
    * Join the given parts into a full path
    *
    * @param parts - The parts of the path to join
    */
-  joinPath: (...parts: Array<string>) => P.Either<string, Ref>;
+  joinPath: (...parts: Array<string>) => P.Either<Err, Ref>;
 
   /**
    * Get a relative path from one full path to another full path

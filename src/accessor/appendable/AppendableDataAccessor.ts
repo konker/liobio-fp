@@ -1,6 +1,7 @@
 import type { Writable } from 'stream';
 
 import type * as P from '../../prelude';
+import type { Err } from '../../types';
 import type { DataAccessor } from '../DataAccessor';
 
 /**
@@ -12,5 +13,5 @@ export type AppendableDataAccessor = DataAccessor & {
    *
    * @param filePath - The full path of the file to append to
    */
-  getFileAppendWriteStream: (filePath: string) => P.TaskEither<string, Writable>;
+  getFileAppendWriteStream: (filePath: string) => P.TaskEither<Err, Writable>;
 };

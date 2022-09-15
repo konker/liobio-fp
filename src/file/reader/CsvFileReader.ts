@@ -3,7 +3,8 @@ import type { Readable } from 'stream';
 
 import type { DataAccessor } from '../../accessor/DataAccessor';
 import * as P from '../../prelude';
-import type { CsvData } from '../../types';
+import type { CsvData, Err } from '../../types';
+import { toErr } from '../../types';
 import type { FileReader } from './FileReader';
 
 type Model = {
@@ -11,7 +12,7 @@ type Model = {
 };
 export type Data = Array<CsvData>;
 
-export function __read<T>(dataAccessor: DataAccessor, filePath: string): P.ReaderTaskEither<Model, string, T> {
+export function __read<T>(dataAccessor: DataAccessor, filePath: string): P.ReaderTaskEither<Model, Err, T> {
   return ({ csvOptions }) =>
     P.pipe(
       dataAccessor.getFileReadStream(filePath),
@@ -27,13 +28,13 @@ export function __read<T>(dataAccessor: DataAccessor, filePath: string): P.Reade
                 })
               );
             }),
-          String
+          toErr
         )
       )
     );
 }
 
-function _read(dataAccessor: DataAccessor, filePath: string): P.ReaderTaskEither<Model, string, Data> {
+function _read(dataAccessor: DataAccessor, filePath: string): P.ReaderTaskEither<Model, Err, Data> {
   return __read(dataAccessor, filePath);
 }
 
