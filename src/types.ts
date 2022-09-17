@@ -1,6 +1,8 @@
 import type * as t from 'io-ts';
 
 import * as P from './prelude';
+import type { LibError } from './utils/error';
+import { toLibError } from './utils/error';
 
 export type JsonData = Record<string, unknown> | Array<unknown>;
 export type CsvData = Array<unknown>;
@@ -24,11 +26,15 @@ export function fileTypeIsOther(fileType: FileType): fileType is FileType.Other 
   return fileType === FileType.Other;
 }
 
+export function mockFunction<T extends (...args: Array<any>) => any>(fn: T): jest.MockedFunction<T> {
+  return fn as jest.MockedFunction<T>;
+}
+
 export type DirectoryPath = t.Branded<string, { readonly DirectoryPath: unique symbol }>;
 export type FileName = t.Branded<string, { readonly FileName: unique symbol }>;
 export type IoUrl = t.Branded<string, { readonly URL: unique symbol }>;
 export type Path = DirectoryPath | FileName;
 export type Ref = Path | IoUrl;
 
-export type Err = Error;
-export const toErr = P.Either_.toError;
+export type Err = LibError;
+export const toErr = toLibError; //P.Either_.toError;

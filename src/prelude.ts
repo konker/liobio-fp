@@ -89,6 +89,8 @@ export { ReaderTaskEither } from 'fp-ts/lib/ReaderTaskEither';
 export * as ReaderTaskEither_ from 'fp-ts/lib/ReaderTaskEither';
 export { Magma } from 'fp-ts/lib/Magma';
 export * as Magma_ from 'fp-ts/lib/Magma';
+export { Monoid } from 'fp-ts/lib/Monoid';
+export * as Monoid_ from 'fp-ts/lib/Monoid';
 export { Refinement } from 'fp-ts/lib/Refinement';
 export * as Refinement_ from 'fp-ts/lib/Refinement';
 export { Ord } from 'fp-ts/lib/Ord';

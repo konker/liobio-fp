@@ -6,13 +6,5 @@ import { PassThrough } from 'stream';
  * The purpose of this is so that the stream can be kept alive until the promise resolves.
  */
 export class PromiseDependentWritableStream extends PassThrough implements Writable {
-  private _promise: Promise<unknown> | undefined;
-
-  set promise(promise: Promise<unknown> | undefined) {
-    this._promise = promise;
-  }
-
-  get promise(): Promise<unknown> | undefined {
-    return this._promise;
-  }
+  promise: Promise<unknown> | undefined;
 }

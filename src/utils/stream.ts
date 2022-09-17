@@ -1,9 +1,22 @@
 import type { Readable, Writable } from 'stream';
+import type { ReadableStream } from 'stream/web';
 
 import * as P from '../prelude';
 import type { PromiseDependentWritableStream } from '../stream/PromiseDependentWritableStream';
 import type { Err } from '../types';
 import { toErr } from '../types';
+
+/**
+ * Consume a readStream
+ * @param readStream
+ */
+export async function readStreamToBuffer(readStream: Readable | ReadableStream): Promise<Buffer> {
+  const chunks: Array<Buffer> = [];
+  for await (const chunk of readStream) {
+    chunks.push(Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
 
 /**
  * Wait for a readable stream to fully pipe to a write-stream
