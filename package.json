@@ -5,7 +5,7 @@
   "main": "dist",
   "types": "dist",
   "scripts": {
-    "test": "jest",
+    "test": "jest -w 4",
     "lint": "tslint -p tsconfig.json",
     "build": "tsc",
     "Kprepare": "npm run build",

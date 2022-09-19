@@ -16,10 +16,9 @@ export function __read<T>(dataAccessor: DataAccessor, filePath: string): P.Reade
   return ({ csvOptions }) =>
     P.pipe(
       dataAccessor.getFileReadStream(filePath),
-      (x) => x,
       P.TaskEither_.chain((readable: Readable) =>
         P.TaskEither_.tryCatch(
-          async () =>
+          () =>
             new Promise<T>((resolve, reject) => {
               readable.pipe(
                 csvParse(csvOptions, (err, csvData) => {

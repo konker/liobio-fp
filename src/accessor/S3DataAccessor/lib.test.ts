@@ -116,7 +116,7 @@ describe('S3DataAccessor/lib', () => {
       await expect(
         fromReaderTaskEither(
           model,
-          //'s3://foobucket/foo/exists.txt'
+          // 's3://foobucket/foo/exists.txt'
           unit.s3HeadObject({
             Type: FileType.File,
             Bucket: 'foobucket',
@@ -131,7 +131,7 @@ describe('S3DataAccessor/lib', () => {
       await expect(
         fromReaderTaskEither(
           model,
-          //'s3://foobucket/foo/does-not-exist.txt'
+          // 's3://foobucket/foo/does-not-exist.txt'
           unit.s3HeadObject({
             Type: FileType.File,
             Bucket: 'foobucket',
@@ -142,12 +142,12 @@ describe('S3DataAccessor/lib', () => {
       ).rejects.toThrow('NotFound');
     });
 
-    //[FIXME: crash error message]
+    // [FIXME: crash error message]
     xit('should function correctly when a general error is thrown', async () => {
       await expect(
         fromReaderTaskEither(
           model,
-          //'s3://foobucket/foo/error.txt'
+          // 's3://foobucket/foo/error.txt'
           unit.s3HeadObject({
             Type: FileType.File,
             Bucket: 'foobucket',
@@ -303,7 +303,6 @@ describe('S3DataAccessor/lib', () => {
       jest.mock('@aws-sdk/lib-storage', () => {
         return {
           Upload: jest.fn().mockImplementation((params) => {
-            console.log('KONK900', params);
             return {
               done: async () => ({}),
             };
@@ -312,15 +311,12 @@ describe('S3DataAccessor/lib', () => {
       });
 
       s3Mock.on(PutObjectCommand).callsFake((params) => {
-        console.log('KONK90', params);
         return Promise.resolve({});
       });
       s3Mock.on(CreateMultipartUploadCommand).callsFake((params) => {
-        console.log('KONK91', params);
         return Promise.resolve({ UploadId: '1' });
       });
       uploadStub = s3Mock.on(UploadPartCommand).callsFake((params) => {
-        console.log('KONK92', params);
         return Promise.resolve({ ETag: '1' });
       });
     });
@@ -339,7 +335,7 @@ describe('S3DataAccessor/lib', () => {
           FullPath: 'bar/exists.txt',
         })
       );
-      //[FIXME: seems impossible to mock the Upload?]
+      // [FIXME: seems impossible to mock the Upload?]
       // await result.promise;
 
       expect(result).toBeInstanceOf(Writable);

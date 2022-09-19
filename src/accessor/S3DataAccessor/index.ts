@@ -6,7 +6,7 @@ import type { Readable, Writable } from 'stream';
 import * as P from '../../prelude';
 import type { Err, FileName, Path } from '../../types';
 import { FileType, toErr } from '../../types';
-import type { S3IoUrl, S3UrlData, S3UrlDataDirectory } from '../../utils/s3-uri-utils';
+import type { S3IoUrl, S3UrlData } from '../../utils/s3-uri-utils';
 import * as s3Utils from '../../utils/s3-uri-utils';
 import { createS3Url, s3UrlDataIsDirectory, s3UrlDataIsFile } from '../../utils/s3-uri-utils';
 import type { DataAccessor } from '../DataAccessor';
@@ -49,28 +49,21 @@ function listFiles(s3url: string): P.ReaderTaskEither<Model, Err, Array<S3IoUrl>
           toErr('[S3DataAccessor] Cannot list files with a non-directory url')
         )
       ),
-      (x) => x,
       P.Task_.of,
-      (x) => x,
       P.TaskEither_.chain((parsed) =>
         P.pipe(
-          parsed,
-          (x) => x,
-          (parsed) => s3ListObjects(parsed)(model),
-          (x) => x,
+          s3ListObjects(parsed)(model),
           P.TaskEither_.chain((allFiles) =>
             P.pipe(
               P.TaskEither_.tryCatch(async () => {
                 if (allFiles.IsTruncated) {
-                  //[FIXME:fp console?]
-                  console.warn(`[S3DataAccessor] WARNING: listing is truncated: ${s3url}`);
+                  throw new Error(`[S3DataAccessor] Error: listing is truncated: ${s3url}`);
                 }
 
                 return _processListing(parsed, allFiles.CommonPrefixes, 'Prefix').concat(
                   _processListing(parsed, allFiles.Contents, 'Key')
                 );
-              }, toErr),
-              (x) => x
+              }, toErr)
             )
           )
         )
@@ -251,7 +244,7 @@ function extname(filePath: string): string {
 export function s3DataAccessor(): P.Task<DataAccessor> {
   return async () => {
     const model: Model = {
-      s3: new S3.S3Client(Object.assign({}, process.env['AWS_REGION'] ? { region: process.env['AWS_REGION'] } : {})),
+      s3: new S3.S3Client(Object.assign({}, process.env.AWS_REGION ? { region: process.env.AWS_REGION } : {})),
     };
 
     return {

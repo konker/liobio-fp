@@ -70,7 +70,7 @@ export function getFileReadStream(filePath: string): P.ReaderTaskEither<Model, E
   return (model) => P.TaskEither_.tryCatch(async () => model.fs.createReadStream(filePath), toErr);
 }
 
-//[FIXME:fp _readline?]
+// [FIXME:fp _readline?]
 export function getFileLineReadStream(filePath: string): P.ReaderTaskEither<Model, Err, _readline.Interface> {
   return (model) =>
     P.pipe(

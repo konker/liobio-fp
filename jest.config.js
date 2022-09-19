@@ -7,7 +7,18 @@ module.exports = {
     },
   },
   transform: {
-    '^.+\\.(t|j)sx?$': 'ts-jest',
+    '^.+\\.tsx?$': 'ts-jest',
   },
   roots: ['src'],
+  moduleFileExtensions: ['ts', 'js'],
+  collectCoverage: true,
+  collectCoverageFrom: ['src/**/*.ts'],
+  coverageThreshold: {
+    global: {
+      branches: 100,
+      functions: 100,
+      lines: 100,
+      statements: 100,
+    },
+  },
 };

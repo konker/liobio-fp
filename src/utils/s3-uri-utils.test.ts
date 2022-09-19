@@ -124,7 +124,7 @@ describe('S3 URI Utils', () => {
       s3Mock = mockClient(S3Client);
       s3Mock.on(GetObjectCommand).resolves({});
 
-      //[FIXME: this cannot be done?]
+      // [FIXME: this cannot be done?]
       stub1 = jest
         .spyOn(s3RequestPresigner, 'getSignedUrl')
         .mockImplementation((_, params: any) =>
