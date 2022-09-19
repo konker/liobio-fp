@@ -1,18 +1,17 @@
 import { fromTask, fromTaskEither } from 'ruins-ts';
-import sinon from 'sinon';
 import { PassThrough } from 'stream';
 
 import { fsDataAccessor } from '../../../accessor/appendable/FsDataAccessor';
 import * as P from '../../../prelude';
 import { ndJsonFileWriter } from './NdJsonFileWriter';
+import SpyInstance = jest.SpyInstance;
 
 describe('FileReader', () => {
-  const sandbox = sinon.createSandbox();
   let dataAccessor: any;
   let writeStream: any;
   let fileData: Array<string>;
-  let stub1: sinon.SinonStub;
-  let stub2: sinon.SinonStub;
+  let stub1: SpyInstance;
+  let stub2: SpyInstance;
 
   describe('NdJsonFileWriter', () => {
     const TEST_S = '{"foo":"A","bar":123}\n{"foo":"B","bar":456}\n';
@@ -24,11 +23,12 @@ describe('FileReader', () => {
       writeStream.on('data', (chunk: any) => fileData.push(chunk.toString()));
 
       dataAccessor = await fromTask(fsDataAccessor());
-      stub1 = sandbox.stub(dataAccessor, 'getFileWriteStream').returns(P.TaskEither_.of(writeStream));
-      stub2 = sandbox.stub(dataAccessor, 'getFileAppendWriteStream').returns(P.TaskEither_.of(writeStream));
+      stub1 = jest.spyOn(dataAccessor, 'getFileWriteStream').mockReturnValue(P.TaskEither_.of(writeStream));
+      stub2 = jest.spyOn(dataAccessor, 'getFileAppendWriteStream').mockReturnValue(P.TaskEither_.of(writeStream));
     });
     afterEach(() => {
-      sandbox.restore();
+      stub1.mockClear();
+      stub2.mockClear();
     });
 
     it('should function correctly', async () => {
@@ -39,8 +39,8 @@ describe('FileReader', () => {
       await fromTaskEither(fileWriter.write(fp, TEST_O2));
       await fromTask(fileWriter.close(fp));
 
-      expect(stub1.calledOnce).toBe(true);
-      expect(stub1.getCall(0).args[0]).toBe('/foo/bar.ndjson');
+      expect(stub1).toHaveBeenCalledTimes(1);
+      expect(stub1.mock.calls[0][0]).toBe('/foo/bar.ndjson');
       expect(fileData.join('')).toStrictEqual(TEST_S);
     });
 
@@ -52,8 +52,8 @@ describe('FileReader', () => {
       await fromTaskEither(fileWriter.write(fp, TEST_O2));
       await fromTask(fileWriter.close(fp));
 
-      expect(stub2.calledOnce).toBe(true);
-      expect(stub2.getCall(0).args[0]).toBe('/foo/bar.ndjson');
+      expect(stub2).toHaveBeenCalledTimes(1);
+      expect(stub2.mock.calls[0][0]).toBe('/foo/bar.ndjson');
       expect(fileData.join('')).toStrictEqual(`{"foo":"Z","bar":987}\n${TEST_S}`);
     });
   });

@@ -1,15 +1,14 @@
 import { fromTask, fromTaskEither } from 'ruins-ts';
-import sinon from 'sinon';
 import { Readable } from 'stream';
 
 import { fsDataAccessor } from '../../accessor/appendable/FsDataAccessor';
 import * as P from '../../prelude';
 import { csvObjectFileReader } from './CsvObjectFileReader';
+import SpyInstance = jest.SpyInstance;
 
 describe('FileReader', () => {
-  const sandbox = sinon.createSandbox();
   let dataAccessor: any;
-  let stub1: sinon.SinonStub;
+  let stub1: SpyInstance;
 
   describe('CsvObjectFileReader', () => {
     const TEST_S = '"foo","bar"\n"A","123"\n"B","456"';
@@ -20,19 +19,18 @@ describe('FileReader', () => {
 
     beforeEach(async () => {
       dataAccessor = await fromTask(fsDataAccessor());
-      //[XXX:remove] sandbox.stub(dataAccessor, 'readFile').returns(P.TaskEither_.of(Buffer.from(TEST_S)));
-      stub1 = sandbox.stub(dataAccessor, 'getFileReadStream').returns(P.TaskEither_.of(Readable.from(TEST_S)));
+      stub1 = jest.spyOn(dataAccessor, 'getFileReadStream').mockReturnValue(P.TaskEither_.of(Readable.from(TEST_S)));
     });
     afterEach(() => {
-      sandbox.restore();
+      stub1.mockClear();
     });
 
     it('should function correctly', async () => {
       const fileReader = csvObjectFileReader({ delimiter: ',' });
       const data = await fromTaskEither(fileReader.read(dataAccessor, '/foo/bar.csv'));
 
-      expect(stub1.calledOnce).toBe(true);
-      expect(stub1.getCall(0).args[0]).toBe('/foo/bar.csv');
+      expect(stub1).toHaveBeenCalledTimes(1);
+      expect(stub1.mock.calls[0][0]).toBe('/foo/bar.csv');
       expect(data).toStrictEqual(TEST_O);
     });
   });

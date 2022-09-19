@@ -1,4 +1,6 @@
-import * as AWS from 'aws-sdk';
+import type { S3Client } from '@aws-sdk/client-s3';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import path from 'path';
 import { URL } from 'url';
 
@@ -150,18 +152,17 @@ export function isS3File(part: string): boolean {
 /**
  * Get a temporary signed access URL for the given S3 resource
  *
- * @param {S3Url} s3url
+ * @param {S3Client} s3Client
+ * @param {S3IoUrl} s3url
  */
-export function createHttpsUrl(s3url: S3IoUrl): P.TaskEither<Err, string> {
+export function createHttpsUrl(s3Client: S3Client, s3url: S3IoUrl): P.TaskEither<Err, string> {
   return P.pipe(
     parseS3Url(s3url),
     P.TaskEither_.fromEither,
     P.TaskEither_.chain((parts) =>
       P.TaskEither_.tryCatch(async () => {
-        const params = { Bucket: parts.Bucket, Key: parts.FullPath };
-        const s3 = new AWS.S3({ region: process.env['AWS_REGION'] as string, apiVersion: '2006-03-01' });
-
-        return s3.getSignedUrlPromise('getObject', params);
+        const cmd = new GetObjectCommand({ Bucket: parts.Bucket, Key: parts.FullPath });
+        return getSignedUrl(s3Client, cmd);
       }, toErr)
     )
   );

@@ -1,13 +1,13 @@
+import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import * as s3RequestPresigner from '@aws-sdk/s3-request-presigner';
+import type { AwsStub } from 'aws-sdk-client-mock';
+import { mockClient } from 'aws-sdk-client-mock';
 import { fromEither, fromTaskEither } from 'ruins-ts';
-
-// [XXX: need to require AWS to be able to mock it in this way]
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const AWS = require('aws-sdk');
-import sinon from 'sinon';
 
 import { FileType } from '../types';
 import type { S3IoUrl } from './s3-uri-utils';
 import * as s3UriUtils from './s3-uri-utils';
+import SpyInstance = jest.SpyInstance;
 
 describe('S3 URI Utils', () => {
   describe('helpers', () => {
@@ -116,32 +116,33 @@ describe('S3 URI Utils', () => {
     });
   });
 
-  describe('createHttpsUrl', () => {
-    const sandbox = sinon.createSandbox();
+  describe.skip('createHttpsUrl', () => {
+    let s3Mock: AwsStub<any, any>;
+    let stub1: SpyInstance;
+
     beforeAll(() => {
-      process.env['AWS_S3_US_EAST_1_REGIONAL_ENDPOINT'] = 'regional';
-      // tslint:disable-next-line:only-arrow-functions
-      sandbox.stub(AWS, 'S3').value(function () {
-        return {
-          getSignedUrlPromise: sandbox
-            .stub()
-            .callsFake((_, params) =>
-              Promise.resolve(
-                `https://${params.Bucket}.s3.eu-west-1.amazonaws.com/${params.Key}?AWSAccessKeyId=blahblah&signature=blahblah`
-              )
-            ),
-        };
-      });
+      s3Mock = mockClient(S3Client);
+      s3Mock.on(GetObjectCommand).resolves({});
+
+      //[FIXME: this cannot be done?]
+      stub1 = jest
+        .spyOn(s3RequestPresigner, 'getSignedUrl')
+        .mockImplementation((_, params: any) =>
+          Promise.resolve(
+            `https://${params.Bucket}.s3.eu-west-1.amazonaws.com/${params.Key}?AWSAccessKeyId=blahblah&signature=blahblah`
+          )
+        );
     });
     afterAll(() => {
-      delete process.env['AWS_S3_US_EAST_1_REGIONAL_ENDPOINT'];
-      sandbox.restore();
+      stub1.mockClear();
+      s3Mock.restore();
     });
 
     it('should function correctly', async () => {
+      const s3Client = new S3Client({});
       const s3url = 's3://foo/bar/baz.txt' as S3IoUrl;
 
-      expect(await fromTaskEither(s3UriUtils.createHttpsUrl(s3url))).toMatch(
+      expect(await fromTaskEither(s3UriUtils.createHttpsUrl(s3Client, s3url))).toMatch(
         /^https:\/\/foo.s3.eu-west-1.amazonaws.com\/bar\/baz.txt/
       );
     });
