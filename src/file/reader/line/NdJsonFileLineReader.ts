@@ -1,8 +1,9 @@
 import type { DataAccessor } from '../../../accessor/DataAccessor';
 import * as P from '../../../prelude';
 import type { Err, JsonData } from '../../../types';
+import { toLibError } from '../../../utils/error';
 import type { FileLineReader, FileLineReaderHandle } from './FileLineReader';
-import { close, readLine } from './FileLineReader';
+import { close } from './FileLineReader';
 
 export type Data = JsonData;
 
@@ -22,7 +23,7 @@ function _open(dataAccessor: DataAccessor, filePath: string): P.TaskEither<Err, 
       fp,
       gen: (async function* () {
         for await (const line of fp) {
-          yield JSON.parse(line);
+          yield P.pipe(P.Json_.parse(line), P.Either_.mapLeft(toLibError));
         }
       })(),
     }))
@@ -39,7 +40,6 @@ function _open(dataAccessor: DataAccessor, filePath: string): P.TaskEither<Err, 
 export function ndJsonFileLineReader(): FileLineReader<Data> {
   return {
     open: _open,
-    readLine,
     close,
   };
 }

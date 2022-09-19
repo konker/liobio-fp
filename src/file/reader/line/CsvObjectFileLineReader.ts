@@ -5,8 +5,9 @@ import zipObject from 'lodash.zipobject';
 import type { DataAccessor } from '../../../accessor/DataAccessor';
 import * as P from '../../../prelude';
 import type { CsvData, CsvObjectData, Err } from '../../../types';
+import { toLibError } from '../../../utils/error';
 import type { FileLineReader, FileLineReaderHandle } from './FileLineReader';
-import { close, readLine } from './FileLineReader';
+import { close } from './FileLineReader';
 
 type Model = {
   csvOptions: csvParse.Options;
@@ -33,19 +34,27 @@ function _open(
       P.TaskEither_.map((fp) => ({
         fp,
         gen: (async function* () {
-          let headers: CsvData | undefined = undefined;
+          let headers: P.Either<Err, CsvData> | undefined;
           let first = true;
 
           for await (const line of fp) {
             if (first) {
-              headers = csvParserSync(line, csvOptions).pop();
+              headers = P.Either_.tryCatch(() => csvParserSync(line, csvOptions).pop() as CsvData, toLibError);
               first = false;
               continue;
             }
 
             if (headers) {
-              const record: Array<string> = csvParserSync(line, csvOptions).pop();
-              yield zipObject(headers as Array<string>, record);
+              const definedHeaders = headers;
+              yield P.pipe(
+                P.Either_.Do,
+                P.Either_.bind('headerRecord', () => definedHeaders),
+                P.Either_.bind('record', () =>
+                  P.Either_.tryCatch(() => csvParserSync(line, csvOptions).pop(), toLibError)
+                ),
+                P.Either_.map(({ headerRecord, record }) => zipObject(headerRecord as Array<string>, record))
+              );
+              // yield P.Either_.right(zipObject(headers as Array<string>, record));
             }
           }
         })(),
@@ -66,7 +75,6 @@ export function csvObjectFileLineReader(csvOptions: csvParse.Options): FileLineR
 
   return {
     open: P.flow(_open, (r) => r(model)),
-    readLine,
     close,
   };
 }

@@ -1,5 +1,5 @@
 import readline from 'readline';
-import { fromTask, fromTaskEither } from 'ruins-ts';
+import { fromEither, fromTask, fromTaskEither } from 'ruins-ts';
 import { Readable } from 'stream';
 
 import { fsDataAccessor } from '../../../accessor/appendable/FsDataAccessor';
@@ -39,12 +39,13 @@ describe('FileReader', () => {
 
     it('should function correctly', async () => {
       const fileReader = ndJsonFileLineReader();
-      const data = [];
+      const buf = [];
       const fh = await fromTaskEither(fileReader.open(dataAccessor, '/foo/bar.ndjson'));
       for await (const rec of fh.gen) {
-        data.push(rec);
+        buf.push(rec);
       }
       await fileReader.close(fh);
+      const data = fromEither(P.pipe(buf, P.Array_.sequence(P.Either_.Applicative)));
 
       expect(stub1).toHaveBeenCalledTimes(1);
       expect(stub1.mock.calls[0][0]).toBe('/foo/bar.ndjson');

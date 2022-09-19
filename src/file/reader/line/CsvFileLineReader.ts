@@ -4,8 +4,9 @@ import csvParserSync from 'csv-parse/lib/sync';
 import type { DataAccessor } from '../../../accessor/DataAccessor';
 import * as P from '../../../prelude';
 import type { CsvData, Err } from '../../../types';
+import { toLibError } from '../../../utils/error';
 import type { FileLineReader, FileLineReaderHandle } from './FileLineReader';
-import { close, readLine } from './FileLineReader';
+import { close } from './FileLineReader';
 
 type Model = {
   csvOptions: csvParse.Options;
@@ -32,7 +33,7 @@ function _open(
         fp,
         gen: (async function* () {
           for await (const line of fp) {
-            yield csvParserSync(line, csvOptions).pop();
+            yield P.Either_.tryCatch(() => csvParserSync(line, csvOptions).pop(), toLibError);
           }
         })(),
       }))
@@ -52,7 +53,6 @@ export function csvFileLineReader(csvOptions: csvParse.Options): FileLineReader<
 
   return {
     open: P.flow(_open, (r) => r(model)),
-    readLine,
     close,
   };
 }

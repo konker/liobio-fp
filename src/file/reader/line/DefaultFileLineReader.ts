@@ -2,7 +2,7 @@ import type { DataAccessor } from '../../../accessor/DataAccessor';
 import * as P from '../../../prelude';
 import type { Err } from '../../../types';
 import type { FileLineReader, FileLineReaderHandle } from './FileLineReader';
-import { close, readLine } from './FileLineReader';
+import { close } from './FileLineReader';
 
 export type Data = string;
 
@@ -22,7 +22,7 @@ function _open(dataAccessor: DataAccessor, filePath: string): P.TaskEither<Err, 
       fp,
       gen: (async function* () {
         for await (const line of fp) {
-          yield line;
+          yield P.Either_.right(line);
         }
       })(),
     }))
@@ -38,7 +38,6 @@ function _open(dataAccessor: DataAccessor, filePath: string): P.TaskEither<Err, 
 export function defaultFileLineReader(): FileLineReader<string> {
   return {
     open: _open,
-    readLine,
     close,
   };
 }
