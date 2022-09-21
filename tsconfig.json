@@ -22,8 +22,8 @@
     "noUnusedLocals": false,
     "downlevelIteration": true,
     "declaration": true,
-    "outDir": "./lib"
+    "outDir": "./dist"
   },
   "include": ["src"],
-  "exclude": ["node_modules", "**/__tests__/*"]
+  "exclude": ["node_modules", "**/__tests__/*", "**/*.test.ts", "integration"]
 }

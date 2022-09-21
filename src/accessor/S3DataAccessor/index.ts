@@ -52,7 +52,8 @@ function listFiles(s3url: string): P.ReaderTaskEither<Model, Err, Array<S3IoUrl>
       P.Task_.of,
       P.TaskEither_.chain((parsed) =>
         P.pipe(
-          s3ListObjects(parsed)(model),
+          model,
+          s3ListObjects(parsed),
           P.TaskEither_.chain((allFiles) =>
             P.pipe(
               P.TaskEither_.tryCatch(async () => {
@@ -161,18 +162,10 @@ function removeDirectory(s3url: string): P.ReaderTaskEither<Model, Err, void> {
       )
     ),
 
-    // Remove the directory itself
+    // Remove the directory itself.
+    // No need to check if is a Directory url, as listFiles will have already failed
     P.ReaderTaskEither_.chain((_void) =>
-      P.pipe(
-        s3Utils.parseS3Url(s3url),
-        P.Either_.chain(
-          P.Either_.fromPredicate(s3UrlDataIsDirectory, () =>
-            toErr('[S3DataAccessor] Cannot remove a directory with a non-directory url')
-          )
-        ),
-        P.ReaderTask_.of,
-        P.ReaderTaskEither_.chain(s3DeleteObject)
-      )
+      P.pipe(s3Utils.parseS3Url(s3url), P.ReaderTask_.of, P.ReaderTaskEither_.chain(s3DeleteObject))
     )
   );
 }
@@ -189,7 +182,14 @@ function getFileReadStream(s3url: string): P.ReaderTaskEither<Model, Err, Readab
 }
 
 function getFileLineReadStream(s3url: string): P.ReaderTaskEither<Model, Err, _readline.Interface> {
-  return P.pipe(getFileReadStream(s3url), P.ReaderTaskEither_.chain(readlineInterfaceFromReadStream));
+  return P.pipe(
+    getFileReadStream(s3url),
+    P.Reader_.map(
+      P.TaskEither_.chain((x) => {
+        return readlineInterfaceFromReadStream(x);
+      })
+    )
+  );
 }
 
 function getFileWriteStream(s3url: string): P.ReaderTaskEither<Model, Err, Writable> {

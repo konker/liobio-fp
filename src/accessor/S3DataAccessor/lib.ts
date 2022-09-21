@@ -144,19 +144,16 @@ export function s3DeleteObject(parsed: S3UrlData): P.ReaderTaskEither<Model, Err
     }, toErr);
 }
 
-export function readlineInterfaceFromReadStream(
-  readStream: Readable
-): P.ReaderTaskEither<Model, Err, readline.Interface> {
-  return (model) =>
-    P.TaskEither_.tryCatch(
-      async () =>
-        readline.createInterface({
-          input: readStream,
-          historySize: 0,
-          terminal: false,
-          crlfDelay: Infinity,
-          escapeCodeTimeout: 10000,
-        }),
-      toErr
-    );
+export function readlineInterfaceFromReadStream(readStream: Readable): P.TaskEither<Err, readline.Interface> {
+  return P.TaskEither_.tryCatch(
+    async () =>
+      readline.createInterface({
+        input: readStream,
+        historySize: 0,
+        terminal: false,
+        crlfDelay: Infinity,
+        escapeCodeTimeout: 10000,
+      }),
+    toErr
+  );
 }

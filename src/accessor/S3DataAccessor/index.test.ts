@@ -10,32 +10,60 @@ import { FileType } from '../../types';
 import type { DataAccessor } from '../DataAccessor';
 import { s3DataAccessor } from './index';
 import * as lib from './lib';
-
-jest.mock('./lib');
+import SpyInstance = jest.SpyInstance;
 
 describe('S3DataAccessor', () => {
   let dataAccessor: DataAccessor;
-  let s3ListObjectsMock: jest.MockedFunction<typeof lib.s3ListObjects>;
+  let s3ListObjectsMock: SpyInstance;
 
   beforeAll(async () => {
     mockClient(S3Client);
-    s3ListObjectsMock = jest.mocked(lib.s3ListObjects);
-    s3ListObjectsMock.mockImplementation((parsed) => (_) => {
+
+    s3ListObjectsMock = jest.spyOn(lib, 's3ListObjects');
+    s3ListObjectsMock.mockImplementation((parsed) => (_: any) => {
+      if (parsed.FullPath === 'bar/baz/') {
+        return P.TaskEither_.of({
+          $metadata: {},
+          IsTruncated: false,
+          Contents: [{ Key: 'bar/baz/test-file0.txt' }],
+        });
+      }
       if (parsed.FullPath === 'bar/') {
         return P.TaskEither_.of({
           $metadata: {},
           IsTruncated: false,
-          Contents: [{ Key: 'bar/test-file.txt' }],
+          Contents: [{ Key: 'bar/test-file1.txt' }],
+          CommonPrefixes: [{ Prefix: 'bar/baz/' }],
+        });
+      }
+      if (parsed.FullPath === 'bartruncated/') {
+        return P.TaskEither_.of({
+          $metadata: {},
+          IsTruncated: true,
+          Contents: [{ Key: 'bartruncated/test-file2.txt' }],
+          CommonPrefixes: [{ Prefix: 'bartruncated/' }],
         });
       }
       return P.TaskEither_.of({
         $metadata: {},
         IsTruncated: false,
         Contents: [],
+        CommonPrefixes: [],
       });
     });
 
     dataAccessor = await fromTask(s3DataAccessor());
+  });
+
+  describe('s3DataAccessor', () => {
+    it('should construct as expected', async () => {
+      delete process.env.AWS_REGION;
+      dataAccessor = await fromTask(s3DataAccessor());
+    });
+    it('should construct as expected with AWS_REGION', async () => {
+      process.env.AWS_REGION = 'eu-north-1';
+      dataAccessor = await fromTask(s3DataAccessor());
+    });
   });
 
   describe('ID', () => {
@@ -52,7 +80,7 @@ describe('S3DataAccessor', () => {
     it('should function correctly', async () => {
       const files = await fromTaskEither(dataAccessor.listFiles('s3://foobucket/bar'));
       expect(s3ListObjectsMock).toHaveBeenCalledTimes(1);
-      expect(files[0]).toBe('s3://foobucket/bar/test-file.txt');
+      expect(files).toStrictEqual(['s3://foobucket/bar/baz', 's3://foobucket/bar/test-file1.txt']);
     });
 
     it('should fail correctly', async () => {
@@ -60,6 +88,13 @@ describe('S3DataAccessor', () => {
         '[S3DataAccessor] Cannot list files with a non-directory url'
       );
       expect(s3ListObjectsMock).toHaveBeenCalledTimes(0);
+    });
+
+    it('should fail correctly when result is truncated', async () => {
+      await expect(fromTaskEither(dataAccessor.listFiles('s3://foobucket/bartruncated'))).rejects.toThrow(
+        '[S3DataAccessor] Error: listing is truncated'
+      );
+      expect(s3ListObjectsMock).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -71,17 +106,17 @@ describe('S3DataAccessor', () => {
   });
 
   describe('exists', () => {
-    let s3HeadObjectMock: jest.MockedFunction<typeof lib.s3HeadObject>;
+    let s3HeadObjectMock: SpyInstance;
     beforeAll(async () => {
-      s3HeadObjectMock = jest.mocked(lib.s3HeadObject);
-      s3HeadObjectMock.mockImplementation((parsed) => (_) => {
+      s3HeadObjectMock = jest.spyOn(lib, 's3HeadObject');
+      s3HeadObjectMock.mockImplementation((parsed) => (_: any) => {
         if (parsed.FullPath.includes('exists')) {
           return P.TaskEither_.of(true);
         }
         if (parsed.FullPath.includes('does-not-exist')) {
-          return P.TaskEither_.of(false);
+          return P.TaskEither_.left({ code: 'NotFound' });
         }
-        throw new Error('GeneralError');
+        return P.TaskEither_.left({ code: 'GeneralError' });
       });
     });
     beforeEach(() => {
@@ -105,10 +140,10 @@ describe('S3DataAccessor', () => {
   });
 
   describe('readFile', () => {
-    let s3GetObjectMock: jest.MockedFunction<typeof lib.s3GetObject>;
+    let s3GetObjectMock: SpyInstance;
     beforeAll(async () => {
-      s3GetObjectMock = jest.mocked(lib.s3GetObject);
-      s3GetObjectMock.mockImplementation((parsed) => (_) => {
+      s3GetObjectMock = jest.spyOn(lib, 's3GetObject');
+      s3GetObjectMock.mockImplementation((parsed) => (_: any) => {
         if (parsed.FullPath.includes('exists')) {
           return P.TaskEither_.of(Buffer.from('test-file-data'));
         }
@@ -137,10 +172,10 @@ describe('S3DataAccessor', () => {
   });
 
   describe('read streams', () => {
-    let s3GetObjectReadStreamMock: jest.MockedFunction<typeof lib.s3GetObjectReadStream>;
+    let s3GetObjectReadStreamMock: SpyInstance;
     beforeAll(async () => {
-      s3GetObjectReadStreamMock = jest.mocked(lib.s3GetObjectReadStream);
-      s3GetObjectReadStreamMock.mockImplementation((parsed) => (_) => {
+      s3GetObjectReadStreamMock = jest.spyOn(lib, 's3GetObjectReadStream');
+      s3GetObjectReadStreamMock.mockImplementation((parsed) => (_: any) => {
         if (parsed.FullPath.includes('exists')) {
           return P.TaskEither_.of(new PassThrough());
         }
@@ -170,7 +205,7 @@ describe('S3DataAccessor', () => {
       });
     });
 
-    describe.skip('getFileLineReadStream', () => {
+    describe('getFileLineReadStream', () => {
       beforeEach(() => {
         s3GetObjectReadStreamMock.mockClear();
       });
@@ -196,10 +231,10 @@ describe('S3DataAccessor', () => {
   });
 
   describe('getFileWriteStream', () => {
-    let s3GetObjectWriteStreamMock: jest.MockedFunction<typeof lib.s3GetObjectWriteStream>;
+    let s3GetObjectWriteStreamMock: SpyInstance;
     beforeAll(async () => {
-      s3GetObjectWriteStreamMock = jest.mocked(lib.s3GetObjectWriteStream);
-      s3GetObjectWriteStreamMock.mockImplementation((parsed) => (_) => {
+      s3GetObjectWriteStreamMock = jest.spyOn(lib, 's3GetObjectWriteStream');
+      s3GetObjectWriteStreamMock.mockImplementation((parsed) => (_: any) => {
         if (parsed.FullPath.includes('exists')) {
           return P.TaskEither_.of(new PromiseDependentWritableStream());
         }
@@ -230,10 +265,10 @@ describe('S3DataAccessor', () => {
   });
 
   describe('write objects', () => {
-    let s3PutObjectMock: jest.MockedFunction<typeof lib.s3PutObject>;
+    let s3PutObjectMock: SpyInstance;
     beforeAll(async () => {
-      s3PutObjectMock = jest.mocked(lib.s3PutObject);
-      s3PutObjectMock.mockImplementation((parsed) => (_) => {
+      s3PutObjectMock = jest.spyOn(lib, 's3PutObject');
+      s3PutObjectMock.mockImplementation((parsed) => (_: any) => {
         if (parsed.FullPath.includes('error')) {
           throw new Error('GeneralError');
         }
@@ -305,10 +340,10 @@ describe('S3DataAccessor', () => {
   });
 
   describe('delete objects', () => {
-    let s3DeleteObjectMock: jest.MockedFunction<typeof lib.s3DeleteObject>;
+    let s3DeleteObjectMock: SpyInstance;
     beforeAll(async () => {
-      s3DeleteObjectMock = jest.mocked(lib.s3DeleteObject);
-      s3DeleteObjectMock.mockImplementation((parsed) => (_) => {
+      s3DeleteObjectMock = jest.spyOn(lib, 's3DeleteObject');
+      s3DeleteObjectMock.mockImplementation((parsed) => (_: any) => {
         if (parsed.FullPath.includes('error')) {
           throw new Error('GeneralError');
         }
@@ -352,18 +387,32 @@ describe('S3DataAccessor', () => {
       });
 
       it('should function correctly', async () => {
-        await fromTaskEither(dataAccessor.removeDirectory('s3://foobucket/bar/'));
+        await fromTaskEither(dataAccessor.removeDirectory('s3://foobucket/bar'));
 
-        expect(s3ListObjectsMock).toHaveBeenCalledTimes(1);
-        expect(s3DeleteObjectMock).toHaveBeenCalledTimes(2);
+        expect(s3ListObjectsMock).toHaveBeenCalledTimes(2);
+        expect(s3DeleteObjectMock).toHaveBeenCalledTimes(4);
         expect(s3DeleteObjectMock?.mock?.calls?.[0]?.[0]).toStrictEqual({
           Bucket: 'foobucket',
-          File: 'test-file.txt',
-          FullPath: 'bar/test-file.txt',
+          File: 'test-file1.txt',
+          FullPath: 'bar/test-file1.txt',
           Path: 'bar/',
           Type: 'File',
         });
         expect(s3DeleteObjectMock?.mock?.calls?.[1]?.[0]).toStrictEqual({
+          Bucket: 'foobucket',
+          File: 'test-file0.txt',
+          FullPath: 'bar/baz/test-file0.txt',
+          Path: 'bar/baz/',
+          Type: 'File',
+        });
+        expect(s3DeleteObjectMock?.mock?.calls?.[2]?.[0]).toStrictEqual({
+          Bucket: 'foobucket',
+          File: undefined,
+          FullPath: 'bar/baz/',
+          Path: 'bar/baz/',
+          Type: 'Directory',
+        });
+        expect(s3DeleteObjectMock?.mock?.calls?.[3]?.[0]).toStrictEqual({
           Bucket: 'foobucket',
           File: undefined,
           FullPath: 'bar/',
@@ -415,6 +464,7 @@ describe('S3DataAccessor', () => {
       expect(fromEither(dataAccessor.joinPath('foo/bar', 'baz.json'))).toBe('foo/bar/baz.json');
       expect(fromEither(dataAccessor.joinPath('/foo', 'baz.json'))).toBe('/foo/baz.json');
       expect(fromEither(dataAccessor.joinPath('/', 'baz.json'))).toBe('/baz.json');
+      expect(fromEither(dataAccessor.joinPath())).toBe('');
     });
   });
 

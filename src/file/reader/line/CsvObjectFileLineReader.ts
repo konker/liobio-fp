@@ -41,10 +41,7 @@ function _open(
             if (first) {
               headers = P.Either_.tryCatch(() => csvParserSync(line, csvOptions).pop() as CsvData, toLibError);
               first = false;
-              continue;
-            }
-
-            if (headers) {
+            } else if (headers) {
               const definedHeaders = headers;
               yield P.pipe(
                 P.Either_.Do,
@@ -54,7 +51,6 @@ function _open(
                 ),
                 P.Either_.map(({ headerRecord, record }) => zipObject(headerRecord as Array<string>, record))
               );
-              // yield P.Either_.right(zipObject(headers as Array<string>, record));
             }
           }
         })(),

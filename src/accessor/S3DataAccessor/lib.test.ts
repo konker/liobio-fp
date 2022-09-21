@@ -12,9 +12,10 @@ import type { AwsStub } from 'aws-sdk-client-mock';
 import { mockClient } from 'aws-sdk-client-mock';
 import { Blob } from 'buffer';
 import readline from 'readline';
+import { fromTaskEither } from 'ruins-ts';
 import { PassThrough, Readable, Writable } from 'stream';
+import { ReadableStream } from 'stream/web';
 
-import { fromReaderTaskEither } from '../../../../ruins-ts/lib/modules/reader-task-either';
 import { PromiseDependentWritableStream } from '../../stream/PromiseDependentWritableStream';
 import type { DirectoryPath, FileName } from '../../types';
 import { FileType } from '../../types';
@@ -41,6 +42,9 @@ describe('S3DataAccessor/lib', () => {
       }
       if (params.Key.includes('blob')) {
         return Promise.resolve({ Body: new Blob(['test-file-data']) });
+      }
+      if (params.Key.includes('readablestream')) {
+        return Promise.resolve({ Body: new ReadableStream() });
       }
       if (params.Key.includes('invalid')) {
         return Promise.resolve({ Body: 'test-file-data-cannot-just-be-a-string' });
@@ -70,14 +74,13 @@ describe('S3DataAccessor/lib', () => {
     });
 
     it('should function correctly', async () => {
-      const result = await fromReaderTaskEither(
-        model,
+      const result = await fromTaskEither(
         unit.s3ListObjects({
           Type: FileType.Directory,
           Bucket: 'foobucket',
           Path: 'bar/' as DirectoryPath,
           FullPath: 'bar/',
-        })
+        })(model)
       );
 
       expect(listObjectsStub.calls().length).toBe(1);
@@ -86,14 +89,13 @@ describe('S3DataAccessor/lib', () => {
 
     it('should fail correctly', async () => {
       await expect(
-        fromReaderTaskEither(
-          model,
+        fromTaskEither(
           unit.s3ListObjects({
             Type: FileType.Directory,
             Bucket: 'nosuchbucket',
             Path: 'bar/' as DirectoryPath,
             FullPath: 'bar/',
-          })
+          })(model)
         )
       ).rejects.toThrow('GeneralError');
     });
@@ -114,30 +116,28 @@ describe('S3DataAccessor/lib', () => {
 
     it('should function correctly when file exists', async () => {
       await expect(
-        fromReaderTaskEither(
-          model,
+        fromTaskEither(
           // 's3://foobucket/foo/exists.txt'
           unit.s3HeadObject({
             Type: FileType.File,
             Bucket: 'foobucket',
             Path: 'foo/' as DirectoryPath,
             FullPath: 'foo/exists.txt',
-          })
+          })(model)
         )
       ).resolves.toBe(true);
     });
 
     it('should function correctly when files does not exist', async () => {
       await expect(
-        fromReaderTaskEither(
-          model,
+        fromTaskEither(
           // 's3://foobucket/foo/does-not-exist.txt'
           unit.s3HeadObject({
             Type: FileType.File,
             Bucket: 'foobucket',
             Path: 'foo/' as DirectoryPath,
             FullPath: 'foo/does-not-exist.txt',
-          })
+          })(model)
         )
       ).rejects.toThrow('NotFound');
     });
@@ -145,15 +145,14 @@ describe('S3DataAccessor/lib', () => {
     // [FIXME: crash error message]
     xit('should function correctly when a general error is thrown', async () => {
       await expect(
-        fromReaderTaskEither(
-          model,
+        fromTaskEither(
           // 's3://foobucket/foo/error.txt'
           unit.s3HeadObject({
             Type: FileType.File,
             Bucket: 'foobucket',
             Path: 'foo/' as DirectoryPath,
             FullPath: 'foo/error.txt',
-          })
+          })(model)
         )
       ).rejects.toThrow('GeneralError');
     });
@@ -165,15 +164,14 @@ describe('S3DataAccessor/lib', () => {
     });
 
     it('should function correctly when object exists', async () => {
-      const result = await fromReaderTaskEither(
-        model,
+      const result = await fromTaskEither(
         unit.s3GetObject({
           Type: FileType.File,
           Bucket: 'foobucket',
           Path: 'bar/' as DirectoryPath,
           File: 'exists.txt' as FileName,
           FullPath: 'bar/exists.txt',
-        })
+        })(model)
       );
 
       expect(getObjectStub.calls().length).toBe(1);
@@ -183,29 +181,41 @@ describe('S3DataAccessor/lib', () => {
 
     it('should fail correctly when object exists as a blob', async () => {
       await expect(
-        fromReaderTaskEither(
-          model,
+        fromTaskEither(
           unit.s3GetObject({
             Type: FileType.File,
             Bucket: 'foobucket',
             Path: 'bar/' as DirectoryPath,
             File: 'blob.txt' as FileName,
             FullPath: 'bar/blob.txt',
-          })
+          })(model)
         )
       ).rejects.toThrow('S3 object Body is a Blob');
     });
 
+    it('should fail correctly when object exists as a ReadableStream', async () => {
+      await expect(
+        fromTaskEither(
+          unit.s3GetObject({
+            Type: FileType.File,
+            Bucket: 'foobucket',
+            Path: 'bar/' as DirectoryPath,
+            File: 'readablestream.txt' as FileName,
+            FullPath: 'bar/readablestream.txt',
+          })(model)
+        )
+      ).rejects.toThrow('S3 object Body is a ReadableStream');
+    });
+
     it('should function correctly when object has missing body', async () => {
-      const result = await fromReaderTaskEither(
-        model,
+      const result = await fromTaskEither(
         unit.s3GetObject({
           Type: FileType.File,
           Bucket: 'foobucket',
           Path: 'bar/' as DirectoryPath,
           File: 'no-body.txt' as FileName,
           FullPath: 'bar/no-body.txt',
-        })
+        })(model)
       );
 
       expect(getObjectStub.calls().length).toBe(1);
@@ -215,30 +225,28 @@ describe('S3DataAccessor/lib', () => {
 
     it('should fail correctly when object has invalid body', async () => {
       await expect(
-        fromReaderTaskEither(
-          model,
+        fromTaskEither(
           unit.s3GetObject({
             Type: FileType.File,
             Bucket: 'foobucket',
             Path: 'bar/' as DirectoryPath,
             File: 'invalid.txt' as FileName,
             FullPath: 'bar/invalid.txt',
-          })
+          })(model)
         )
       ).rejects.toThrow('Unknown S3 object Body type');
     });
 
     it('should fail correctly when object does not exist', async () => {
       await expect(
-        fromReaderTaskEither(
-          model,
+        fromTaskEither(
           unit.s3GetObject({
             Type: FileType.File,
             Bucket: 'foobucket',
             Path: 'bar/' as DirectoryPath,
             File: 'missing.txt' as FileName,
             FullPath: 'bar/missing.txt',
-          })
+          })(model)
         )
       ).rejects.toThrow('NotFound');
     });
@@ -250,15 +258,14 @@ describe('S3DataAccessor/lib', () => {
     });
 
     it('should function correctly when object exists', async () => {
-      const result = await fromReaderTaskEither(
-        model,
+      const result = await fromTaskEither(
         unit.s3GetObjectReadStream({
           Type: FileType.File,
           Bucket: 'foobucket',
           Path: 'bar/' as DirectoryPath,
           File: 'exists.txt' as FileName,
           FullPath: 'bar/exists.txt',
-        })
+        })(model)
       );
 
       expect(getObjectStub.calls().length).toBe(1);
@@ -268,30 +275,56 @@ describe('S3DataAccessor/lib', () => {
 
     it('should fail correctly when object has invalid body', async () => {
       await expect(
-        fromReaderTaskEither(
-          model,
+        fromTaskEither(
           unit.s3GetObjectReadStream({
             Type: FileType.File,
             Bucket: 'foobucket',
             Path: 'bar/' as DirectoryPath,
             File: 'invalid.txt' as FileName,
             FullPath: 'bar/invalid.txt',
-          })
+          })(model)
         )
       ).rejects.toThrow('Body is not a Readable');
     });
 
+    it('should fail correctly when object exists as a Blob', async () => {
+      await expect(
+        fromTaskEither(
+          unit.s3GetObjectReadStream({
+            Type: FileType.File,
+            Bucket: 'foobucket',
+            Path: 'bar/' as DirectoryPath,
+            File: 'blob.txt' as FileName,
+            FullPath: 'bar/blob.txt',
+          })(model)
+        )
+      ).rejects.toThrow('Body is a Blob');
+    });
+
+    it('should fail correctly when object exists as a ReadableStream', async () => {
+      await expect(
+        fromTaskEither(
+          unit.s3GetObjectReadStream({
+            Type: FileType.File,
+            Bucket: 'foobucket',
+            Path: 'bar/' as DirectoryPath,
+            File: 'readablestream.txt' as FileName,
+            FullPath: 'bar/readablestream.txt',
+          })(model)
+        )
+      ).rejects.toThrow('Body is a ReadableStream');
+    });
+
     it('should fail correctly when object does not exist', async () => {
       await expect(
-        fromReaderTaskEither(
-          model,
+        fromTaskEither(
           unit.s3GetObjectReadStream({
             Type: FileType.File,
             Bucket: 'foobucket',
             Path: 'bar/' as DirectoryPath,
             File: 'missing.txt' as FileName,
             FullPath: 'bar/missing.txt',
-          })
+          })(model)
         )
       ).rejects.toThrow('NotFound');
     });
@@ -325,15 +358,14 @@ describe('S3DataAccessor/lib', () => {
     });
 
     it('should function correctly', async () => {
-      const result = await fromReaderTaskEither(
-        model,
+      const result = await fromTaskEither(
         unit.s3GetObjectWriteStream({
           Type: FileType.File,
           Bucket: 'foobucket',
           Path: 'bar/' as DirectoryPath,
           File: 'exists.txt' as FileName,
           FullPath: 'bar/exists.txt',
-        })
+        })(model)
       );
       // [FIXME: seems impossible to mock the Upload?]
       // await result.promise;
@@ -359,8 +391,7 @@ describe('S3DataAccessor/lib', () => {
     });
 
     it('should function correctly with data', async () => {
-      await fromReaderTaskEither(
-        model,
+      await fromTaskEither(
         unit.s3PutObject(
           {
             Type: FileType.File,
@@ -370,7 +401,7 @@ describe('S3DataAccessor/lib', () => {
             FullPath: 'bar/exists.txt',
           },
           'some-data'
-        )
+        )(model)
       );
 
       expect(putObjectStub.calls().length).toBe(1);
@@ -382,15 +413,14 @@ describe('S3DataAccessor/lib', () => {
     });
 
     it('should function correctly without data', async () => {
-      await fromReaderTaskEither(
-        model,
+      await fromTaskEither(
         unit.s3PutObject({
           Type: FileType.File,
           Bucket: 'foobucket',
           Path: 'bar/' as DirectoryPath,
           File: 'exists.txt' as FileName,
           FullPath: 'bar/exists.txt',
-        })
+        })(model)
       );
 
       expect(putObjectStub.calls().length).toBe(1);
@@ -402,8 +432,7 @@ describe('S3DataAccessor/lib', () => {
 
     it('should fail correctly', async () => {
       await expect(
-        fromReaderTaskEither(
-          model,
+        fromTaskEither(
           unit.s3PutObject(
             {
               Type: FileType.File,
@@ -413,7 +442,7 @@ describe('S3DataAccessor/lib', () => {
               FullPath: 'bar/exists.txt',
             },
             'some-data'
-          )
+          )(model)
         )
       ).rejects.toThrow('GeneralError');
     });
@@ -434,15 +463,14 @@ describe('S3DataAccessor/lib', () => {
     });
 
     it('should function correctly with data', async () => {
-      await fromReaderTaskEither(
-        model,
+      await fromTaskEither(
         unit.s3DeleteObject({
           Type: FileType.File,
           Bucket: 'foobucket',
           Path: 'bar/' as DirectoryPath,
           File: 'exists.txt' as FileName,
           FullPath: 'bar/exists.txt',
-        })
+        })(model)
       );
 
       expect(deleteObjectStub.calls().length).toBe(1);
@@ -454,15 +482,14 @@ describe('S3DataAccessor/lib', () => {
 
     it('should fail correctly', async () => {
       await expect(
-        fromReaderTaskEither(
-          model,
+        fromTaskEither(
           unit.s3DeleteObject({
             Type: FileType.File,
             Bucket: 'barbucket',
             Path: 'bar/' as DirectoryPath,
             File: 'exists.txt' as FileName,
             FullPath: 'bar/exists.txt',
-          })
+          })(model)
         )
       ).rejects.toThrow('GeneralError');
     });
@@ -471,7 +498,7 @@ describe('S3DataAccessor/lib', () => {
   describe('readlineInterfaceFromReadStream', () => {
     it('should work as expected', async () => {
       const readStream = new PassThrough();
-      const result = await fromReaderTaskEither(model, unit.readlineInterfaceFromReadStream(readStream));
+      const result = await fromTaskEither(unit.readlineInterfaceFromReadStream(readStream));
       expect(result).toBeInstanceOf(readline.Interface);
     });
   });

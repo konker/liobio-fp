@@ -9,6 +9,8 @@ import type { S3IoUrl } from './s3-uri-utils';
 import * as s3UriUtils from './s3-uri-utils';
 import SpyInstance = jest.SpyInstance;
 
+jest.mock('@aws-sdk/s3-request-presigner');
+
 describe('S3 URI Utils', () => {
   describe('helpers', () => {
     it('should trimSlash', () => {
@@ -113,28 +115,24 @@ describe('S3 URI Utils', () => {
       expect(() => fromEither(s3UriUtils.parseS3Url('s3://'))).toThrow(
         '[s3-uri-utils] Could not determine bucket name'
       );
+      expect(() => fromEither(s3UriUtils.parseS3Url(''))).toThrow('[s3-uri-utils] Could not parse');
     });
   });
 
-  describe.skip('createHttpsUrl', () => {
+  describe('createHttpsUrl', () => {
     let s3Mock: AwsStub<any, any>;
-    let stub1: SpyInstance;
 
     beforeAll(() => {
       s3Mock = mockClient(S3Client);
       s3Mock.on(GetObjectCommand).resolves({});
 
-      // [FIXME: this cannot be done?]
-      stub1 = jest
-        .spyOn(s3RequestPresigner, 'getSignedUrl')
-        .mockImplementation((_, params: any) =>
-          Promise.resolve(
-            `https://${params.Bucket}.s3.eu-west-1.amazonaws.com/${params.Key}?AWSAccessKeyId=blahblah&signature=blahblah`
-          )
+      jest.mocked(s3RequestPresigner.getSignedUrl).mockImplementation((_, params: any) => {
+        return Promise.resolve(
+          `https://${params.input.Bucket}.s3.eu-west-1.amazonaws.com/${params.input.Key}?AWSAccessKeyId=blahblah&signature=blahblah`
         );
+      });
     });
     afterAll(() => {
-      stub1.mockClear();
       s3Mock.restore();
     });
 
