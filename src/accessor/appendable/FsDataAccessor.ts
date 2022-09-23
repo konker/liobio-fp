@@ -61,7 +61,7 @@ export function removeDirectory(dirPath: string): P.ReaderTaskEither<Model, Err,
   return (model) =>
     P.TaskEither_.tryCatch(async () => {
       if (model.fs.existsSync(dirPath)) {
-        await model.fs.promises.rmdir(dirPath, { recursive: true });
+        await model.fs.promises.rm(dirPath, { recursive: true });
       }
     }, toErr);
 }
@@ -93,13 +93,11 @@ export function getFileLineReadStream(filePath: string): P.ReaderTaskEither<Mode
 }
 
 export function getFileWriteStream(filePath: string): P.ReaderTaskEither<Model, Err, Writable> {
-  return (model) =>
-    P.TaskEither_.tryCatch(async () => model.fs.createWriteStream(filePath, { flags: 'w', encoding: 'utf-8' }), toErr);
+  return (model) => P.TaskEither_.tryCatch(async () => model.fs.createWriteStream(filePath, { flags: 'w' }), toErr);
 }
 
 export function getFileAppendWriteStream(filePath: string): P.ReaderTaskEither<Model, Err, Writable> {
-  return (model) =>
-    P.TaskEither_.tryCatch(async () => model.fs.createWriteStream(filePath, { flags: 'a', encoding: 'utf-8' }), toErr);
+  return (model) => P.TaskEither_.tryCatch(async () => model.fs.createWriteStream(filePath, { flags: 'a' }), toErr);
 }
 
 export function dirName(filePath: string): P.ReaderTaskEither<Model, Err, DirectoryPath> {

@@ -20,6 +20,7 @@ import {
   s3HeadObject,
   s3ListObjects,
   s3PutObject,
+  s3UploadObject,
 } from './lib';
 
 function listFiles(s3url: string): P.ReaderTaskEither<Model, Err, Array<S3IoUrl>> {
@@ -85,9 +86,11 @@ function exists(s3url: string): P.ReaderTaskEither<Model, Err, boolean> {
     s3Utils.parseS3Url(s3url),
     P.ReaderTask_.of,
     P.ReaderTaskEither_.chain(s3HeadObject),
-    P.ReaderTaskEither_.orElse((ex: unknown) =>
-      (ex as any).code === 'NotFound' ? P.ReaderTaskEither_.right(false) : P.ReaderTaskEither_.left(toErr(ex))
-    )
+    P.ReaderTaskEither_.orElse((ex: unknown) => {
+      return (ex as any)['$metadata']?.httpStatusCode === 404
+        ? P.ReaderTaskEither_.right(false)
+        : P.ReaderTaskEither_.left(toErr(ex));
+    })
   );
 }
 
@@ -109,7 +112,7 @@ function writeFile(s3url: string, data: Buffer | string): P.ReaderTaskEither<Mod
       P.Either_.fromPredicate(s3UrlDataIsFile, () => toErr('[S3DataAccessor] Cannot write a file with a directory url'))
     ),
     P.ReaderTask_.of,
-    P.ReaderTaskEither_.chain((parsed) => s3PutObject(parsed, data))
+    P.ReaderTaskEither_.chain((parsed) => s3UploadObject(parsed, data))
   );
 }
 

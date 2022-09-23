@@ -209,7 +209,7 @@ describe('FsDataAccessor', () => {
 
       expect(stub1).toHaveBeenCalledTimes(1);
       expect(stub1.mock.calls[0][0]).toBe('/foo/bar.txt');
-      expect(stub1.mock.calls[0][1]).toStrictEqual({ flags: 'w', encoding: 'utf-8' });
+      expect(stub1.mock.calls[0][1]).toStrictEqual({ flags: 'w' });
       expect(data).toBeInstanceOf(Writable);
     });
   });
@@ -228,7 +228,7 @@ describe('FsDataAccessor', () => {
 
       expect(stub1).toHaveBeenCalledTimes(1);
       expect(stub1.mock.calls[0][0]).toBe('/foo/bar.txt');
-      expect(stub1.mock.calls[0][1]).toStrictEqual({ flags: 'a', encoding: 'utf-8' });
+      expect(stub1.mock.calls[0][1]).toStrictEqual({ flags: 'a' });
       expect(data).toBeInstanceOf(Writable);
     });
   });
@@ -266,7 +266,7 @@ describe('FsDataAccessor', () => {
     let stub1: SpyInstance;
     let stub2: SpyInstance;
     beforeEach(() => {
-      stub2 = jest.spyOn(fs.promises, 'rmdir').mockResolvedValue();
+      stub2 = jest.spyOn(fs.promises, 'rm').mockResolvedValue();
     });
     afterEach(() => {
       stub1.mockClear();

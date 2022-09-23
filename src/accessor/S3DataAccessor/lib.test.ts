@@ -25,13 +25,24 @@ import * as unit from './lib';
 describe('S3DataAccessor/lib', () => {
   let s3Mock: AwsStub<any, any>;
   let getObjectStub: AwsStub<any, any>;
+  let putObjectStub: AwsStub<any, any>;
+  let uploadStub: AwsStub<any, any>;
   let model: Model;
 
   beforeAll(async () => {
     s3Mock = mockClient(S3Client);
-    model = {
-      s3: new S3Client({}),
-    };
+    s3Mock.on(CreateMultipartUploadCommand).resolves({ UploadId: '1' });
+    uploadStub = s3Mock.on(UploadPartCommand).resolves({ ETag: '1' });
+
+    jest.mock('@aws-sdk/lib-storage', () => {
+      return {
+        Upload: jest.fn().mockImplementation((params) => {
+          return {
+            done: async () => ({}),
+          };
+        }),
+      };
+    });
 
     getObjectStub = s3Mock.on(GetObjectCommand).callsFake((params) => {
       if (params.Key.includes('exists')) {
@@ -54,6 +65,10 @@ describe('S3DataAccessor/lib', () => {
       }
       return Promise.reject({ code: 'NotFound' });
     });
+
+    model = {
+      s3: new S3Client({ region: 'eu-north-1' }),
+    };
   });
   afterAll(() => {
     s3Mock.restore();
@@ -331,29 +346,13 @@ describe('S3DataAccessor/lib', () => {
   });
 
   describe('s3GetObjectWriteStream', () => {
-    let uploadStub: AwsStub<any, any>;
     beforeAll(() => {
-      jest.mock('@aws-sdk/lib-storage', () => {
-        return {
-          Upload: jest.fn().mockImplementation((params) => {
-            return {
-              done: async () => ({}),
-            };
-          }),
-        };
-      });
-
-      s3Mock.on(PutObjectCommand).callsFake((params) => {
+      putObjectStub = s3Mock.on(PutObjectCommand).callsFake((params) => {
         return Promise.resolve({});
-      });
-      s3Mock.on(CreateMultipartUploadCommand).callsFake((params) => {
-        return Promise.resolve({ UploadId: '1' });
-      });
-      uploadStub = s3Mock.on(UploadPartCommand).callsFake((params) => {
-        return Promise.resolve({ ETag: '1' });
       });
     });
     beforeEach(() => {
+      putObjectStub.reset();
       uploadStub.resetHistory();
     });
 
@@ -367,8 +366,6 @@ describe('S3DataAccessor/lib', () => {
           FullPath: 'bar/exists.txt',
         })(model)
       );
-      // [FIXME: seems impossible to mock the Upload?]
-      // await result.promise;
 
       expect(result).toBeInstanceOf(Writable);
       expect(result).toBeInstanceOf(PromiseDependentWritableStream);
@@ -377,8 +374,54 @@ describe('S3DataAccessor/lib', () => {
   });
 
   describe('s3PutObject', () => {
-    let putObjectStub: AwsStub<any, any>;
-    beforeAll(() => {
+    beforeEach(() => {
+      putObjectStub = s3Mock.on(PutObjectCommand).callsFake((params) => {
+        if (params.Bucket.includes('foobucket')) {
+          return Promise.resolve({});
+        }
+        return Promise.reject('GeneralError');
+      });
+    });
+    afterEach(() => {
+      putObjectStub.reset();
+    });
+
+    it('should function correctly with data', async () => {
+      await fromTaskEither(
+        unit.s3PutObject({
+          Type: FileType.Directory,
+          Bucket: 'foobucket',
+          Path: 'bar/' as DirectoryPath,
+          File: undefined,
+          FullPath: 'bar',
+        })(model)
+      );
+
+      expect(putObjectStub.calls().length).toBe(1);
+      expect(putObjectStub.call(0).args[0].input).toStrictEqual({
+        Bucket: 'foobucket',
+        ContentLength: 0,
+        Key: 'bar',
+      });
+    });
+
+    it('should fail correctly', async () => {
+      await expect(
+        fromTaskEither(
+          unit.s3PutObject({
+            Type: FileType.Directory,
+            Bucket: 'barbucket',
+            Path: 'bar/' as DirectoryPath,
+            File: undefined,
+            FullPath: 'bar/',
+          })(model)
+        )
+      ).rejects.toThrow('GeneralError');
+    });
+  });
+
+  describe('s3UploadObject', () => {
+    beforeEach(() => {
       putObjectStub = s3Mock.on(PutObjectCommand).callsFake((params) => {
         if (params.Bucket.includes('foobucket')) {
           return Promise.resolve({});
@@ -387,12 +430,13 @@ describe('S3DataAccessor/lib', () => {
       });
     });
     beforeEach(() => {
-      putObjectStub.resetHistory();
+      uploadStub.resetHistory();
+      putObjectStub.reset();
     });
 
-    it('should function correctly with data', async () => {
+    it('should function correctly with string data', async () => {
       await fromTaskEither(
-        unit.s3PutObject(
+        unit.s3UploadObject(
           {
             Type: FileType.File,
             Bucket: 'foobucket',
@@ -408,43 +452,32 @@ describe('S3DataAccessor/lib', () => {
       expect(putObjectStub.call(0).args[0].input).toStrictEqual({
         Bucket: 'foobucket',
         Key: 'bar/exists.txt',
-        Data: 'some-data',
+        Body: Buffer.from('some-data'),
+        ContentLength: 9,
       });
     });
 
-    it('should function correctly without data', async () => {
+    it('should function correctly with Buffer data', async () => {
       await fromTaskEither(
-        unit.s3PutObject({
-          Type: FileType.File,
-          Bucket: 'foobucket',
-          Path: 'bar/' as DirectoryPath,
-          File: 'exists.txt' as FileName,
-          FullPath: 'bar/exists.txt',
-        })(model)
+        unit.s3UploadObject(
+          {
+            Type: FileType.File,
+            Bucket: 'foobucket',
+            Path: 'bar/' as DirectoryPath,
+            File: 'exists.txt' as FileName,
+            FullPath: 'bar/exists.txt',
+          },
+          Buffer.from('some-data')
+        )(model)
       );
 
       expect(putObjectStub.calls().length).toBe(1);
       expect(putObjectStub.call(0).args[0].input).toStrictEqual({
         Bucket: 'foobucket',
         Key: 'bar/exists.txt',
+        Body: Buffer.from('some-data'),
+        ContentLength: 9,
       });
-    });
-
-    it('should fail correctly', async () => {
-      await expect(
-        fromTaskEither(
-          unit.s3PutObject(
-            {
-              Type: FileType.File,
-              Bucket: 'barbucket',
-              Path: 'bar/' as DirectoryPath,
-              File: 'exists.txt' as FileName,
-              FullPath: 'bar/exists.txt',
-            },
-            'some-data'
-          )(model)
-        )
-      ).rejects.toThrow('GeneralError');
     });
   });
 

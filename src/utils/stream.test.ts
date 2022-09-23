@@ -35,7 +35,7 @@ describe('stream utils', () => {
         writeStream.on('finish', resolve);
       });
 
-      const data = await fromTaskEither(streamUtils.waitForPromiseDependentStreamPipe(readStream, writeStream));
+      const data = await fromTaskEither(streamUtils.waitForPromiseDependentWritableStreamPipe(readStream, writeStream));
       expect(data).toBe(6);
     });
 
@@ -47,7 +47,7 @@ describe('stream utils', () => {
       });
 
       await expect(
-        fromTaskEither(streamUtils.waitForPromiseDependentStreamPipe(readStream, writeStream))
+        fromTaskEither(streamUtils.waitForPromiseDependentWritableStreamPipe(readStream, writeStream))
       ).rejects.toThrowError();
     });
 
@@ -56,8 +56,8 @@ describe('stream utils', () => {
       const writeStream = new PromiseDependentWritableStream();
 
       await expect(
-        fromTaskEither(streamUtils.waitForPromiseDependentStreamPipe(readStream, writeStream))
-      ).rejects.toThrowError('waitForPromiseDependentStreamPipe called without a stream promise');
+        fromTaskEither(streamUtils.waitForPromiseDependentWritableStreamPipe(readStream, writeStream))
+      ).rejects.toThrowError('waitForPromiseDependentWritableStreamPipe called without a stream promise');
     });
   });
 });

@@ -7,7 +7,6 @@ import { fromEither, fromTaskEither } from 'ruins-ts';
 import { FileType } from '../types';
 import type { S3IoUrl } from './s3-uri-utils';
 import * as s3UriUtils from './s3-uri-utils';
-import SpyInstance = jest.SpyInstance;
 
 jest.mock('@aws-sdk/s3-request-presigner');
 

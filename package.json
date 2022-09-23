@@ -6,7 +6,7 @@
   "types": "dist",
   "scripts": {
     "test": "jest -w 4 src --coverageDirectory=coverage",
-    "integration": "jest -w 4 integration --collectCoverage=false",
+    "integration": "jest -w 4 integration --collectCoverage=false --detectOpenHandles --testTimeout=10000",
     "lint": "tslint -p tsconfig.json",
     "build": "tsc",
     "Kprepare": "npm run build",

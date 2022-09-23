@@ -114,9 +114,12 @@ describe('S3DataAccessor', () => {
           return P.TaskEither_.of(true);
         }
         if (parsed.FullPath.includes('does-not-exist')) {
-          return P.TaskEither_.left({ code: 'NotFound' });
+          return P.TaskEither_.left({ $metadata: { httpStatusCode: 404 }, code: 'NotFound' });
         }
-        return P.TaskEither_.left({ code: 'GeneralError' });
+        if (parsed.FullPath.includes('no-metadata')) {
+          return P.TaskEither_.left({ code: 'Boom' });
+        }
+        return P.TaskEither_.left({ $metadata: { httpStatusCode: 500 }, code: 'GeneralError' });
       });
     });
     beforeEach(() => {
@@ -130,6 +133,11 @@ describe('S3DataAccessor', () => {
 
     it('should function correctly when files does not exist', async () => {
       await expect(fromTaskEither(dataAccessor.exists('s3://foobucket/foo/does-not-exist.txt'))).resolves.toBe(false);
+      expect(s3HeadObjectMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('should function correctly when metadata is missing', async () => {
+      await expect(fromTaskEither(dataAccessor.exists('s3://foobucket/foo/no-metadata.txt'))).rejects.toThrow();
       expect(s3HeadObjectMock).toHaveBeenCalledTimes(1);
     });
 
@@ -266,9 +274,17 @@ describe('S3DataAccessor', () => {
 
   describe('write objects', () => {
     let s3PutObjectMock: SpyInstance;
+    let s3UploadObjectMock: SpyInstance;
     beforeAll(async () => {
       s3PutObjectMock = jest.spyOn(lib, 's3PutObject');
       s3PutObjectMock.mockImplementation((parsed) => (_: any) => {
+        if (parsed.FullPath.includes('error')) {
+          throw new Error('GeneralError');
+        }
+        return P.TaskEither_.of(undefined);
+      });
+      s3UploadObjectMock = jest.spyOn(lib, 's3UploadObject');
+      s3UploadObjectMock.mockImplementation((parsed) => (_: any) => {
         if (parsed.FullPath.includes('error')) {
           throw new Error('GeneralError');
         }
@@ -279,33 +295,34 @@ describe('S3DataAccessor', () => {
     describe('writeFile', () => {
       beforeEach(() => {
         s3PutObjectMock.mockClear();
+        s3UploadObjectMock.mockClear();
       });
 
       it('should function correctly', async () => {
         await fromTaskEither(dataAccessor.writeFile('s3://foobucket/bar/qux.txt', 'wham-bam-thank-you-sam'));
-        expect(s3PutObjectMock).toHaveBeenCalledTimes(1);
-        expect(s3PutObjectMock?.mock?.calls?.[0]?.[0]).toStrictEqual({
+        expect(s3UploadObjectMock).toHaveBeenCalledTimes(1);
+        expect(s3UploadObjectMock?.mock?.calls?.[0]?.[0]).toStrictEqual({
           Bucket: 'foobucket',
           File: 'qux.txt',
           FullPath: 'bar/qux.txt',
           Path: 'bar/',
           Type: 'File',
         });
-        expect(s3PutObjectMock?.mock?.calls?.[0]?.[1]).toBe('wham-bam-thank-you-sam');
+        expect(s3UploadObjectMock?.mock?.calls?.[0]?.[1]).toBe('wham-bam-thank-you-sam');
       });
 
       it('should fail correctly', async () => {
         await expect(
           fromTaskEither(dataAccessor.writeFile('s3://foobucket/bar/error.txt', 'wham-bam-thank-you-sam'))
         ).rejects.toThrow();
-        expect(s3PutObjectMock).toHaveBeenCalledTimes(1);
+        expect(s3UploadObjectMock).toHaveBeenCalledTimes(1);
       });
 
       it('should fail correctly', async () => {
         await expect(
           fromTaskEither(dataAccessor.writeFile('s3://foobucket/bar', 'wham-bam-thank-you-sam'))
         ).rejects.toThrow();
-        expect(s3PutObjectMock).toHaveBeenCalledTimes(0);
+        expect(s3UploadObjectMock).toHaveBeenCalledTimes(0);
       });
     });
 

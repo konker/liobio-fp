@@ -2,7 +2,7 @@ import type { DataAccessor } from '../accessor/DataAccessor';
 import * as P from '../prelude';
 import { PromiseDependentWritableStream } from '../stream/PromiseDependentWritableStream';
 import type { Err } from '../types';
-import { waitForPromiseDependentStreamPipe, waitForStreamPipe } from '../utils/stream';
+import { waitForPromiseDependentWritableStreamPipe, waitForStreamPipe } from '../utils/stream';
 
 /**
  * High level read stream -> write stream logic
@@ -24,7 +24,7 @@ export function fileCopier(
     P.TaskEither_.bind('writeStream', () => toDataAccessor.getFileWriteStream(toFile)),
     P.TaskEither_.chain(({ readStream, writeStream }) => {
       if (writeStream instanceof PromiseDependentWritableStream) {
-        return waitForPromiseDependentStreamPipe(readStream, writeStream as PromiseDependentWritableStream);
+        return waitForPromiseDependentWritableStreamPipe(readStream, writeStream as PromiseDependentWritableStream);
       }
       return waitForStreamPipe(readStream, writeStream);
     })

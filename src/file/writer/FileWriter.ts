@@ -52,9 +52,13 @@ export function open(dataAccessor: DataAccessor, filePath: string): P.TaskEither
  * @param data
  */
 export function write<T>(fp: Writable, data: T): P.TaskEither<Err, void> {
-  return P.TaskEither_.tryCatch(async () => {
-    fp.write(data);
-  }, toErr);
+  return P.TaskEither_.tryCatch(
+    () =>
+      new Promise((resolve, reject) => {
+        fp.write(data, (error) => (error ? reject(error) : resolve()));
+      }),
+    toErr
+  );
 }
 
 /**
@@ -65,6 +69,7 @@ export function write<T>(fp: Writable, data: T): P.TaskEither<Err, void> {
 export function close(fp: Writable): P.Task<void> {
   return () =>
     new Promise((resolve, _) => {
-      fp.end(() => resolve());
+      fp.on('close', resolve);
+      fp.end();
     });
 }

@@ -26,9 +26,12 @@ export function waitForStreamPipe(readStream: Readable, writeStream: Writable): 
     () =>
       new Promise((resolve, reject) => {
         let size = 0;
-        writeStream.on('data', (data) => (size += data.length));
+        readStream.on('data', (data) => {
+          size = size + data.length;
+        });
+        readStream.on('error', reject);
         writeStream.on('finish', () => resolve(size));
-        writeStream.on('error', (err) => reject(err));
+        writeStream.on('error', reject);
         readStream.pipe(writeStream);
         readStream.resume();
       }),
@@ -39,7 +42,7 @@ export function waitForStreamPipe(readStream: Readable, writeStream: Writable): 
 /**
  * Wait for a readable stream to fully pipe to a S3UploadStream
  */
-export function waitForPromiseDependentStreamPipe(
+export function waitForPromiseDependentWritableStreamPipe(
   readStream: Readable,
   writeStream: PromiseDependentWritableStream
 ): P.TaskEither<Err, number> {
@@ -47,11 +50,14 @@ export function waitForPromiseDependentStreamPipe(
     () =>
       new Promise((resolve, reject) => {
         let size = 0;
-        writeStream.on('data', (data) => (size += data.length));
+        readStream.on('data', (data) => {
+          size = size + data.length;
+        });
+        readStream.on('error', reject);
         readStream.pipe(writeStream);
         readStream.resume();
         if (writeStream.promise) writeStream.promise.then(() => resolve(size)).catch(reject);
-        else reject(Error('waitForPromiseDependentStreamPipe called without a stream promise'));
+        else reject(Error('waitForPromiseDependentWritableStreamPipe called without a stream promise'));
       }),
     toErr
   );

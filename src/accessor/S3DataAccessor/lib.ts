@@ -1,4 +1,4 @@
-import type { ListObjectsV2CommandOutput, S3Client } from '@aws-sdk/client-s3';
+import type { ListObjectsV2CommandOutput, S3, S3Client } from '@aws-sdk/client-s3';
 import {
   DeleteObjectCommand,
   GetObjectCommand,
@@ -118,18 +118,34 @@ export function s3GetObjectWriteStream(
     }, toErr);
 }
 
-export function s3PutObject(parsed: S3UrlData, data?: Buffer | string): P.ReaderTaskEither<Model, Err, void> {
+export function s3PutObject(parsed: S3UrlDataDirectory): P.ReaderTaskEither<Model, Err, void> {
   return (model) =>
     P.TaskEither_.tryCatch(async () => {
-      const input = Object.assign(
-        {
+      const cmd = new PutObjectCommand({
+        Bucket: parsed.Bucket,
+        Key: parsed.FullPath,
+        ContentLength: 0,
+      });
+      await model.s3.send(cmd);
+    }, toErr);
+}
+
+export function s3UploadObject(parsed: S3UrlDataFile, data: Buffer | string): P.ReaderTaskEither<Model, Err, void> {
+  return (model) =>
+    P.TaskEither_.tryCatch(async () => {
+      const buf = data instanceof Buffer ? data : Buffer.from(data);
+      const upload = new Upload({
+        client: model.s3,
+        leavePartsOnError: false,
+        params: {
           Bucket: parsed.Bucket,
           Key: parsed.FullPath,
+          Body: buf,
+          ContentLength: buf.length,
         },
-        data ? { Data: data } : {}
-      );
-      const cmd = new PutObjectCommand(input);
-      await model.s3.send(cmd);
+      });
+
+      await upload.done();
     }, toErr);
 }
 
