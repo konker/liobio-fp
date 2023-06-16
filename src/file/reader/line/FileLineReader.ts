@@ -1,9 +1,8 @@
 import type readline from 'readline';
 
 import type { DataAccessor } from '../../../accessor/DataAccessor';
-import type * as P from '../../../prelude';
+import * as P from '../../../prelude';
 import type { Err } from '../../../types';
-import { toErr } from '../../../types';
 
 export type FileLineReaderHandle<T> = {
   readonly fp: readline.Interface;
@@ -44,4 +43,15 @@ export function close<T>(handle: FileLineReaderHandle<T>): P.Task<void> {
   return async () => {
     handle.fp.close();
   };
+}
+
+/**
+ * Default implementation of readLine
+ *
+ * @param handle
+ */
+export function readFileLine<T>(handle: FileLineReaderHandle<T>): P.TaskEither<string, T> {
+  return P.TaskEither_.tryCatch(async () => {
+    return await handle.gen.next().then((r) => r.value);
+  }, String);
 }

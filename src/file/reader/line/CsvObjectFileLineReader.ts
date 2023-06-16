@@ -41,8 +41,8 @@ function _open(
             if (first) {
               headers = P.Either_.tryCatch(() => csvParserSync(line, csvOptions).pop() as CsvData, toLibError);
               first = false;
-            } else if (headers) {
-              const definedHeaders = headers;
+            } else {
+              const definedHeaders = headers as P.Either<Err, CsvData>;
               yield P.pipe(
                 P.Either_.Do,
                 P.Either_.bind('headerRecord', () => definedHeaders),

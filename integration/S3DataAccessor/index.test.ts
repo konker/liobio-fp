@@ -16,6 +16,7 @@ import { ndJsonFileWriter } from '../../src/file/writer/appendable/NdJsonFileWri
 import { jsonFileWriter } from '../../src/file/writer/JsonFileWriter';
 import * as P from '../../src/prelude';
 import type { Err, Ref } from '../../src/types';
+import { toErr } from '../../src/types';
 import {
   AWS_REGION,
   TEST_CSV_AS,
@@ -266,11 +267,13 @@ describe('S3DataAccessor', () => {
           P.TaskEither_.chain((handle) =>
             P.pipe(
               readFileLine(handle),
-              P.TaskEither_.chainFirst(() => P.pipe(fileReader.close(handle), P.TaskEither_.fromTask))
+              P.TaskEither_.mapLeft(toErr),
+              P.TaskEither_.chainFirstTaskK(() => fileReader.close(handle))
             )
           )
         )();
-        expect(result1).toEqual(P.Either_.right('This is f111.txt'));
+        //[FIXME: wtf EitherEither?]
+        expect((result1 as any).right).toEqual(P.Either_.right('This is f111.txt'));
       });
     });
 
@@ -284,11 +287,13 @@ describe('S3DataAccessor', () => {
           P.TaskEither_.chain((handle) =>
             P.pipe(
               readFileLine(handle),
-              P.TaskEither_.chainFirst(() => P.pipe(fileReader.close(handle), P.TaskEither_.fromTask))
+              P.TaskEither_.mapLeft(toErr),
+              P.TaskEither_.chainFirstTaskK(() => fileReader.close(handle))
             )
           )
         )();
-        expect(result1).toEqual(P.Either_.right(TEST_CSV_AS[0]));
+        //[FIXME: wtf EitherEither?]
+        expect((result1 as any).right).toEqual(P.Either_.right(TEST_CSV_AS[0]));
       });
     });
 
@@ -303,11 +308,13 @@ describe('S3DataAccessor', () => {
             P.pipe(
               readFileLine(handle),
               () => readFileLine(handle),
-              P.TaskEither_.chainFirst(() => P.pipe(fileReader.close(handle), P.TaskEither_.fromTask))
+              P.TaskEither_.mapLeft(toErr),
+              P.TaskEither_.chainFirstTaskK(() => fileReader.close(handle))
             )
           )
         )();
-        expect(result1).toEqual(P.Either_.right(TEST_CSV_OS[0]));
+        //[FIXME: wtf EitherEither?]
+        expect((result1 as any).right).toEqual(P.Either_.right(TEST_CSV_OS[0]));
       });
     });
 
@@ -321,11 +328,13 @@ describe('S3DataAccessor', () => {
           P.TaskEither_.chain((handle) =>
             P.pipe(
               readFileLine(handle),
-              P.TaskEither_.chainFirst(() => P.pipe(fileReader.close(handle), P.TaskEither_.fromTask))
+              P.TaskEither_.mapLeft(toErr),
+              P.TaskEither_.chainFirstTaskK(() => fileReader.close(handle))
             )
           )
         )();
-        expect(result1).toEqual(P.Either_.right(TEST_NDJSON_OS[0]));
+        //[FIXME: wtf EitherEither?]
+        expect((result1 as any).right).toEqual(P.Either_.right(TEST_NDJSON_OS[0]));
       });
     });
   });
