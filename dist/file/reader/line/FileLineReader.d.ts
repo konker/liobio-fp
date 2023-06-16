@@ -1,0 +1,38 @@
+/// <reference types="node" />
+import type readline from 'readline';
+import type { DataAccessor } from '../../../accessor/DataAccessor';
+import type * as P from '../../../prelude';
+import type { Err } from '../../../types';
+export declare type FileLineReaderHandle<T> = {
+    readonly fp: readline.Interface;
+    readonly gen: AsyncGenerator<P.Either<Err, T>>;
+};
+/**
+ * Interface for file reader which streams content line by line
+ *
+ * This is used to implement memory-efficient file readers which can
+ * read very large files without exhausting memory constraints.
+ *
+ * @template T - The type of the result of reading a file
+ */
+export declare type FileLineReader<T> = {
+    /**
+     * Open the given file for reading
+     *
+     * The async generator can be used to consume the file content, line by line.
+     *
+     * @param dataAccessor
+     * @param filePath - The full path of the file to read
+     */
+    open: (dataAccessor: DataAccessor, filePath: string) => P.TaskEither<Err, FileLineReaderHandle<T>>;
+    /**
+     * Close the file and clean up resources as needed
+     */
+    close: (handle: FileLineReaderHandle<T>) => P.Task<void>;
+};
+/**
+ * Default implementation of close
+ *
+ * @param handle
+ */
+export declare function close<T>(handle: FileLineReaderHandle<T>): P.Task<void>;
